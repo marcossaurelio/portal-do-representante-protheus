@@ -1,0 +1,192 @@
+#Include "tlpp-core.th"
+#Include "tlpp-rest.th"
+
+namespace custom.portaldorepresentante.frete
+
+@Post("portal-do-representante/frete/valor/rodoviario")
+user function getValorFreteRodoviario()
+
+    local jResponse             := JsonObject():New()       as json
+    local jPath                 := JsonObject():New()       as json
+    local jBody                 := JsonObject():new()       as json
+    local cBody                 := ""                       as character
+    local cQuery                := ""                       as character
+    local cAlias                := ""                       as character
+    local cFilialOrigem         := ""                       as character
+    local cEstadoDestino        := ""                       as character
+    local cCidadeDestino        := ""                       as character
+    local nValorFrete           := 0                        as numeric
+    local cNomeCidadeDestino    := ""                       as character
+
+    jPath := oRest:getQueryRequest() // Parametros passados via query string
+    cBody := oRest:getBodyRequest()
+    jBody:fromJson(cBody)
+
+    cFilialOrigem   := jBody:getJsonObject('filialOrigem')
+    cEstadoDestino  := jBody:getJsonObject('estadoDestino')
+    cCidadeDestino  := jBody:getJsonObject('cidadeDestino')
+
+    custom.portaldorepresentante.setenv.u_McSetEnv("10",cFilialOrigem)
+    
+    cQuery := getQueryFrete(cFilialOrigem,cEstadoDestino,cCidadeDestino)
+
+    cAlias := getNextAlias()
+
+    MPSysOpenQuery(cQuery,cAlias)
+
+    dbSelectArea(cAlias)
+    (cAlias)->(dbGoTop())
+
+    if !(cAlias)->(eof())
+
+        nValorFrete         := (cAlias)->Z02_VLFRET
+        cEstadoDestino      := (cAlias)->Z02_UFDEST
+        cNomeCidadeDestino  := (cAlias)->CC2_MUN
+
+        jResponse['success']            := .T.
+        jResponse['filialOrigem']       := cFilialOrigem
+        jResponse['estadoDestino']      := cEstadoDestino
+        jResponse['cidadeDestino']      := cCidadeDestino
+        jResponse['nomeCidadeDestino']  := cNomeCidadeDestino
+        jResponse['valorFrete']         := nValorFrete
+
+    else
+
+        jResponse['success']        := .F.
+        jResponse['message']        := "Valor de frete não encontrado para a filial e cidade informadas."
+
+    endif
+
+    oRest:setKeyHeaderResponse("Content-Type","application/json")
+    oRest:setResponse(jResponse:toJson())
+
+    (cAlias)->(DbCloseArea())
+
+return
+
+
+@Post("portal-do-representante/frete/valor/maritimo")
+user function getValorFreteMaritimo()
+
+    local jResponse             := JsonObject():New()       as json
+    local jPath                 := JsonObject():New()       as json
+    local jBody                 := JsonObject():new()       as json
+    local cBody                 := ""                       as character
+    local cFilialOrigem         := ""                       as character
+    local cEstadoDestino        := ""                       as character
+    local cCidadeDestino        := ""                       as character
+    local nValorFrete           := 0                        as numeric
+    local cNomeCidadeDestino    := ""                       as character
+    local nPesoCarga            := 0                        as numeric
+    local cTipoContainer        := ""                       as character
+    local nPayloadUtilizado     := 0                        as numeric
+
+    local nPrecoFreteGeralC20   := GetNewPar("MS_PRFGE20",194.80)   as numeric
+    local nPayloadFreteGeralC20 := GetNewPar("MS_PLFGE20",28.2)     as numeric
+    local nPrecoFreteGeralC40   := GetNewPar("MS_PRFGE40",194.80)   as numeric
+    local nPayloadFreteGeralC40 := GetNewPar("MS_PLFGE40",28.2)     as numeric
+
+    local nPrecoFreteRJC20      := GetNewPar("MS_PRFRJ20",276.26)   as numeric
+    local nPayloadFreteRJC20    := GetNewPar("MS_PLFRJ20",28.2)     as numeric
+    local nPrecoFreteRJC40      := GetNewPar("MS_PRFRJ40",306.00)   as numeric
+    local nPayloadFreteRJC40    := GetNewPar("MS_PLFRJ40",28.2)     as numeric
+
+    local nPrecoFreteSPC20      := GetNewPar("MS_PRFSP20",280.44)   as numeric
+    local nPayloadFreteSPC20    := GetNewPar("MS_PLFSP20",27.0)     as numeric
+    local nPrecoFreteSPC40      := GetNewPar("MS_PRFSP40",293.49)   as numeric
+    local nPayloadFreteSPC40    := GetNewPar("MS_PLFSP40",27.5)     as numeric
+
+    jPath := oRest:getQueryRequest() // Parametros passados via query string
+    cBody := oRest:getBodyRequest()
+    jBody:fromJson(cBody)
+
+    cFilialOrigem   := jBody:getJsonObject('filialOrigem')
+    cEstadoDestino  := jBody:getJsonObject('estadoDestino')
+    cCidadeDestino  := jBody:getJsonObject('cidadeDestino')
+    nPesoCarga      := jBody:getJsonObject('pesoTotal')
+
+    custom.portaldorepresentante.setenv.u_McSetEnv("10",cFilialOrigem)
+
+    if cEstadoDestino == "RJ"
+
+        if nPesoCarga <= nPayloadFreteRJC20*1000 .Or. nPayloadFreteRJC20 == nPayloadFreteRJC40
+
+            nValorFrete := nPrecoFreteRJC20
+            cTipoContainer := "C20"
+            nPayloadUtilizado := nPayloadFreteRJC20
+
+        else
+
+            nValorFrete := nPrecoFreteRJC40
+            cTipoContainer := "C40"
+            nPayloadUtilizado := nPayloadFreteRJC40
+
+        endif
+
+    elseif cEstadoDestino == "SP"
+
+        if nPesoCarga <= nPayloadFreteSPC20*1000 .Or. nPayloadFreteSPC20 == nPayloadFreteSPC40
+
+            nValorFrete := nPrecoFreteSPC20
+            cTipoContainer := "C20"
+            nPayloadUtilizado := nPayloadFreteSPC20
+
+        else
+
+            nValorFrete := nPrecoFreteSPC40
+            cTipoContainer := "C40"
+            nPayloadUtilizado := nPayloadFreteSPC40
+
+        endif
+
+    else // Considerando frete geral para outros estados
+
+        if nPesoCarga <= nPayloadFreteGeralC20*1000 .Or. nPayloadFreteGeralC20 == nPayloadFreteGeralC40
+
+            nValorFrete := nPrecoFreteGeralC20
+            cTipoContainer := "C20"
+            nPayloadUtilizado := nPayloadFreteGeralC20
+
+        else
+
+            nValorFrete := nPrecoFreteGeralC40
+            cTipoContainer := "C40"
+            nPayloadUtilizado := nPayloadFreteGeralC40
+
+        endif
+
+    endif
+    
+    if !empty(cEstadoDestino) .and. !empty(cCidadeDestino)
+
+        cNomeCidadeDestino  := posicione("CC2",1,xFilial("CC2")+cEstadoDestino+cCidadeDestino,"CC2_MUN")
+
+    endif
+
+    jResponse['success']            := .T.
+    jResponse['filialOrigem']       := cFilialOrigem
+    jResponse['estadoDestino']      := cEstadoDestino
+    jResponse['cidadeDestino']      := cCidadeDestino
+    jResponse['nomeCidadeDestino']  := cNomeCidadeDestino
+    jResponse['valorFrete']         := nValorFrete
+    jResponse['tipoContainer']      := cTipoContainer
+    jResponse['pesoMaximo']         := nPayloadUtilizado*1000
+
+    oRest:setKeyHeaderResponse("Content-Type","application/json")
+    oRest:setResponse(jResponse:toJson())
+
+return
+
+
+static function getQueryFrete(cFilialOrigem,cEstadoDestino,cCidadeDestino)
+
+    local cQuery := "" as character
+
+    cQuery += " SELECT *
+    cQuery += " FROM "+retSQLName("Z02")+" Z02
+    cQuery += " INNER JOIN "+retSQLName("CC2")+" CC2 ON CC2_YREGIA = Z02_RGDEST AND CC2_EST = Z02_UFDEST AND CC2.D_E_L_E_T_ = ' '
+    cQuery += " WHERE Z02_FILIAL = '" + cFilialOrigem + "' AND CC2_CODMUN = '" + cCidadeDestino + "' AND CC2_EST = '" + cEstadoDestino + "'
+    cQuery += " AND Z02.D_E_L_E_T_ = ' '
+    cQuery += " ORDER BY Z02.R_E_C_N_O_
+
+return cQuery

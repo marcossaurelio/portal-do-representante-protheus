@@ -1,0 +1,85 @@
+#include "protheus.ch"
+#include "tlpp-core.th"
+
+user function REAJUTAB()
+
+    local aPerguntas            := {}
+    local cProdutoDe            := ""
+    local cProdutoAte           := ""
+    local nFatorReajuste        := 1
+    local aCabecalho            := {}
+    local aItens                := {}
+    local nOpcao                := 4
+    local aItem                 := {}
+    local cTabela               := DA0->DA0_CODTAB
+
+    private lMsErroAuto := .F.
+
+    aAdd(aPerguntas, {1, "Fator de Reajuste",   1.0000,                             "@E 9.9999",    "Positivo()",   "", ".T.", 80, .T.})
+    aAdd(aPerguntas, {1, "Produto de",          space(tamSX3("B1_COD")[1]),         "",             ".T.",          "", ".T.", 80, .F.})
+    aAdd(aPerguntas, {1, "Produto ate",         replicate("Z",tamSX3("B1_COD")[1]), "",             ".T.",          "", ".T.", 80, .T.})
+
+    if !paramBox(aPerguntas, "Informe os parâmetros do reajuste de preços")
+
+        return .F.
+
+    endif
+
+    nFatorReajuste  := MV_PAR01
+    cProdutoDe      := MV_PAR02
+    cProdutoAte     := MV_PAR03
+
+    aAdd(aCabecalho, {"DA0_CODTAB", DA0->DA0_CODTAB , nil})
+
+    dbSelectArea("DA1")
+    DA1->(dbSetOrder(1))
+    DA1->(dbGoTop())
+
+    if !DA1->(dbSeek(xFilial("DA1")+DA0->DA0_CODTAB))
+
+        fwAlertError("Tabela de Preços não encontrada para reajuste.", "Erro")
+        return .F.
+
+    endif
+
+    while !DA1->(eof()) .and. DA1->DA1_FILIAL == xFilial("DA0") .and. DA1->DA1_CODTAB == cTabela
+
+        if (DA1->DA1_CODPRO >= cProdutoDe .and. DA1->DA1_CODPRO <= cProdutoAte)
+
+            aItem := {}
+
+            //aAdd(aItem, {"DA1_ITEM",    DA1->DA1_ITEM,                      nil})
+            //aAdd(aItem, {"DA1_CODPRO",  DA1->DA1_CODPRO,                    nil})
+            aAdd(aItem, { "LINPOS",     "DA1_ITEM",                         DA1->DA1_ITEM} )
+            aAdd(aItem, { "AUTDELETA",  "N",                                nil } )
+            aAdd(aItem, { "DA1_PRCVEN", DA1->DA1_PRCVEN * nFatorReajuste,   nil } )
+            aAdd(aItem, { "DA1_YPRFX1", DA1->DA1_YPRFX1 * nFatorReajuste,   nil } )
+            aAdd(aItem, { "DA1_YPRFX2", DA1->DA1_YPRFX2 * nFatorReajuste,   nil } )
+            aAdd(aItem, { "DA1_YPRFX3", DA1->DA1_YPRFX3 * nFatorReajuste,   nil } )
+            aAdd(aItem, { "DA1_YPRFX4", DA1->DA1_YPRFX4 * nFatorReajuste,   nil } )
+            aAdd(aItem, { "DA1_YPRFX5", DA1->DA1_YPRFX5 * nFatorReajuste,   nil } )
+            
+            aAdd(aItens, aItem)
+            
+            aItem := {}
+
+        endif
+
+        DA1->(dbSkip())
+
+    enddo
+
+    omsa010(aCabecalho, aItens, nOpcao)
+
+    if lMsErroAuto
+
+        disarmTransaction()
+        mostraErro()
+        return .F.
+
+    endif
+
+    fwAlertSuccess("Reajuste de Preços realizado com sucesso.", "Sucesso")
+    oms010Vis()
+
+return .T.

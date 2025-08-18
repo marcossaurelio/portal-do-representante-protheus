@@ -1,0 +1,36 @@
+#include 'protheus.ch'
+#include "tlpp-core.th"
+
+class zPrcTab
+
+    //Atributos da classe zPrcTab
+    public data cFilialPreco
+    public data cProduto
+    public data nPreco
+    public data nMaxDiasPgto
+    public data nVolumeMinimo
+    public data nFatMinimo
+    public data nComissao
+    public data aCategorias
+    public data cChave
+    //public data aDadosComplementares
+  
+    //Métodos da classe zPrcTab
+    public method New(cFilialPreco, cProduto, nPreco, nComissao, nMaxDiasPgto, nVolumeMinimo, nFatMinimo, aCategorias, cChave)
+
+endclass
+
+method New(cFilialPreco, cProduto, nPreco, nComissao, nMaxDiasPgto, nVolumeMinimo, nFatMinimo, aCategorias, cChave) class zPrcTab
+
+    //Atribuindo valores nos atributos do objeto instanciado
+    ::cFilialPreco      := cFilialPreco
+    ::cProduto          := cProduto
+    ::nPreco            := nPreco
+    ::nMaxDiasPgto      := nMaxDiasPgto
+    ::nVolumeMinimo     := nVolumeMinimo
+    ::nFatMinimo        := nFatMinimo
+    ::nComissao         := nComissao
+    ::aCategorias       := aCategorias
+    ::cChave            := cChave
+    
+return self //Retorna o objeto instanciado

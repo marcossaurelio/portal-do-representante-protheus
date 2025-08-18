@@ -1,0 +1,33 @@
+#Include "tlpp-core.th"
+#Include "tlpp-rest.th"
+
+namespace custom.portaldorepresentante.setenv
+
+User Function McSetEnv(cEmpresaEnv As Character, cFilialEnv As Character, cUsuarioEnv As Character, cSenhaEnv As Character)
+
+    default cEmpresaEnv := ""
+    default cFilialEnv  := ""
+    default cUsuarioEnv := "admin"
+    default cSenhaEnv   := "SERVCONSULT24"
+
+    // Prepara o ambiente caso ele não esteja preparado
+    if select("SX2") > 0
+
+        if (cFilAnt != cFilialEnv .or. cEmpAnt != cEmpresaEnv) .and. !empty(cEmpresaEnv) .and. !empty(cFilialEnv)
+
+            RpcClearEnv()
+
+        endif
+
+    endif
+
+    if select("SX2") == 0
+
+        cEmpresaEnv := iif(empty(cEmpresaEnv),  "01",           cEmpresaEnv)
+        cFilialEnv  := iif(empty(cFilialEnv),   "01010001",     cFilialEnv)
+
+        RPCSetEnv(cEmpresaEnv,cFilialEnv,cUsuarioEnv,cSenhaEnv)
+
+    endif
+
+Return

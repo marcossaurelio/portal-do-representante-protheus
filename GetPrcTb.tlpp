@@ -1,0 +1,341 @@
+#include "protheus.ch"
+#include "tlpp-core.th"
+
+user function getPrcTb( jDadosProduto )
+
+    local cFilialOrc        := jDadosProduto:getJsonObject('filial')
+    local cProduto          := jDadosProduto:getJsonObject('produto')
+    local cTipoFrete        := jDadosProduto:getJsonObject('tipoFrete')
+    local nPrecoFOB         := jDadosProduto:getJsonObject('precoFOB')
+    local cCategCliente     := jDadosProduto:getJsonObject('categoriaCliente')
+    local nDiasPagto        := jDadosProduto:getJsonObject('diasPagamento')
+    local nVolume           := jDadosProduto:getJsonObject('volumeTotal')
+    local nVlrFaturamento   := jDadosProduto:getJsonObject('totalFaturamento')
+
+    local cQuery            := ""
+    local cAlias            := getNextAlias()
+    local cTipoPreco        := ""
+    local nFaixaMinima      := 0
+    local aFaixasReg        := {}
+    local aItensReg         := {}
+    local aTemp             := {}
+    local nVlrReferencia    := 0
+    local nPreco            := 0
+    local nComissao         := 0
+    local nVolumeMinimo     := 0
+    local nFatMinimo        := 0
+    local nMaxDiasPgto      := 0
+    local aCategorias       := {}
+    local cChave            := ""
+    local nPos              := 0
+    local oPreco            := nil
+    local oPrecoFinal       := nil
+    local aPrecos           := {}
+    local aDescartar        := {}
+    local lExistRegsTudoOk  := .T.
+    local lFilialCotacao    := cFilialOrc == "01010001"
+
+    //private aDadosComplementares := {}
+
+    cQuery += " SELECT *
+    cQuery += " FROM
+    cQuery += "     " + retSQLName("DA1") + " DA1
+    cQuery += " INNER JOIN
+    cQuery += "     " + retSQLName("DA0") + " DA0 ON DA0_FILIAL = DA1_FILIAL AND DA0_CODTAB = DA1_CODTAB AND DA0.D_E_L_E_T_ = ' '
+    cQuery += " WHERE
+    cQuery += "     DA0_DATDE <= " + dToS(date()) + " AND (DA0_DATATE >= " + dToS(date()) + " OR DA0_DATATE = ' ') AND DA0_ATIVO = '1'
+    cQuery += "     AND DA0_YPOREP = 'S' AND (DA0_YCATEG LIKE '%" + cCategCliente + "%' OR DA0_YCATEG = ' ')
+    cQuery += "     AND DA0_YFRETE = '" + iif( lFilialCotacao, "F", cTipoFrete ) + "' AND DA0_YMAXDP >= " + cValToChar(nDiasPagto)
+    cQuery += "     AND DA1.D_E_L_E_T_ = ' ' AND DA1_FILIAL = '" + left(cFilialOrc,4) + "' AND DA1_CODPRO = '" + allTrim(cProduto) + "'
+    cQuery += "     AND DA1_ATIVO = '1' AND DA1_DATVIG <= " + dToS(date())
+    cQuery += " ORDER BY
+    cQuery += "     DA1_YPRFX1,DA1_YPRFX2,DA1_YPRFX4,DA1_YPRFX5 ASC
+
+    mpSysOpenQuery( cQuery, cAlias )
+
+    (cAlias)->(dbGoTop())
+
+    if (cAlias)->(eof())
+
+        (cAlias)->(dbCloseArea())
+        return nil
+
+    endif
+
+    while !(cAlias)->(eof())
+
+        nPreco          := 0
+        nVolumeMinimo   := (cAlias)->DA0_YVLMIN
+        nFatMinimo      := (cAlias)->DA0_YFATMI
+        nMaxDiasPgto    := (cAlias)->DA0_YMAXDP
+        aCategorias     := iif( empty((cAlias)->DA0_YCATEG), {}, strTokArr2(allTrim((cAlias)->DA0_YCATEG),";") )
+        nComissao       := (cAlias)->DA0_YCOMIS
+        cChave          := ""
+
+        cTipoPreco      := (cAlias)->DA0_YTPPRE
+        nFaixaMinima    := (cAlias)->DA0_YFXMIN
+        aFaixasReg      := { nFaixaMinima }
+        aItensReg       := {}
+
+        for nPos := 1 to 5
+
+            if nPos >= 2 .and. empty((cAlias)->&("DA0_YMXFX" + cValToChar(nPos)))
+                exit
+            endif
+
+            aAdd(aFaixasReg,    (cAlias)->&("DA0_YMXFX" + cValToChar(nPos)))
+            aAdd(aItensReg,     (cAlias)->&("DA1_YPRFX" + cValToChar(nPos)))
+
+        next
+
+        do case
+            case cTipoPreco == "V"
+                nVlrReferencia  := nVolume
+            case cTipoPreco == "P"
+                nVlrReferencia  := nDiasPagto
+            case cTipoPreco == "C"
+                nVlrReferencia  := nPrecoFOB
+                // Descarta a faixa mínima de aFaixasReg e troca os arrays para inverter a lógica da busca
+                aDel(aFaixasReg, 1)
+                aSize(aFaixasReg, len(aFaixasReg)-1)
+                aTemp       := aFaixasReg
+                aFaixasReg  := aItensReg
+                aItensReg   := aTemp
+                // Reduz em 0.01 o valor de todas as faixas a partir da segunda
+                for nPos := 2 to len(aFaixasReg)
+                    aFaixasReg[nPos] := aFaixasReg[nPos] - 0.01
+                next
+                // Adiciona um valor aberto para garantir que a busca não falhe
+                aAdd(aFaixasReg, 999999999.99) // Adiciona um valor aberto para garantir que a busca não falhe
+        endcase
+
+        for nPos := 1 to len(aFaixasReg)-1
+
+            if ((nPos == 1 .and. nVlrReferencia >= aFaixasReg[nPos]) .or. (nPos > 1 .and. nVlrReferencia > aFaixasReg[nPos])) .and. nVlrReferencia <= aFaixasReg[nPos+1]
+
+                nPreco  := aItensReg[nPos]
+                cChave  := (cAlias)->DA1_FILIAL + "|" + (cAlias)->DA1_CODTAB + "|" + (cAlias)->DA1_ITEM + "|" + (cAlias)->DA1_CODPRO + "|" + cValToChar(nPos)
+
+                do case
+                    case cTipoPreco == "V"
+                        nVolumeMinimo   := iif( nPos == 1, aFaixasReg[nPos], aFaixasReg[nPos]+0.01 )
+                    case cTipoPreco == "P"
+                        nMaxDiasPgto    := aFaixasReg[nPos+1]
+                    case cTipoPreco == "C"
+                        nComissao       := aItensReg[nPos]
+                        nPreco          := nPrecoFOB
+                endcase
+
+                exit
+
+            endif
+        
+        next
+
+        if empty(cChave)
+            (cAlias)->(dbSkip())
+            loop
+        endif
+
+        oPreco := zPrcTab():New( cFilialOrc, cProduto, nPreco, nComissao, nMaxDiasPgto, nVolumeMinimo, nFatMinimo, aCategorias, cChave )
+
+        aAdd(aPrecos, oPreco)
+
+        (cAlias)->(dbSkip())
+
+    enddo
+
+    (cAlias)->(dbCloseArea())
+
+    if len(aPrecos) == 0
+        return nil
+    endif
+
+    if len(aPrecos) == 1
+
+        oPreco := aPrecos[1]
+
+        if lFilialCotacao .and. cTipoFrete == "C"
+            oPreco:nPreco := getPrecoCIF( jDadosProduto )
+        endif
+
+        oPrecoFinal := oPreco
+        //oPrecoFinal:aDadosComplementares := aDadosComplementares
+
+
+        return oPrecoFinal
+
+    endif
+
+    for nPos := 1 to len(aPrecos)
+
+        if aPrecos[nPos]:nVolumeMinimo > nVolume .or. aPrecos[nPos]:nFatMinimo > nVlrFaturamento
+
+            aAdd(aDescartar, nPos)
+
+        endif
+
+    next
+
+    if len(aDescartar) >= len(aPrecos)
+
+        lExistRegsTudoOk := .F.
+
+    endif
+
+    if empty(aDescartar) .or. len(aDescartar) >= len(aPrecos)
+
+        aDescartar := {}
+
+        for nPos := 1 to len(aPrecos)
+
+            if aPrecos[nPos]:nFatMinimo > nVlrFaturamento
+
+                aAdd(aDescartar, nPos)
+
+            endif
+
+        next
+
+        if empty(aDescartar) .or. len(aDescartar) >= len(aPrecos)
+
+            aDescartar := {}
+
+            for nPos := 1 to len(aPrecos)
+
+                if aPrecos[nPos]:nVolumeMinimo > nVolume
+
+                    aAdd(aDescartar, nPos)
+
+                endif
+
+            next
+
+        endif
+
+    endif
+
+    if len(aDescartar) > 0 .and. len(aDescartar) < len(aPrecos)
+
+        for nPos := len(aDescartar) to 1 step -1
+
+            aDel(aPrecos, aDescartar[nPos])
+
+        next
+
+        aSize(aPrecos, len(aPrecos)-len(aDescartar))
+
+    endif
+    
+    oPreco := aPrecos[1]
+
+    for nPos := 1 to len(aPrecos)
+
+        if !lFilialCotacao
+
+            if lExistRegsTudoOk
+
+                if oPreco:nPreco > aPrecos[nPos]:nPreco
+
+                    oPreco := aPrecos[nPos]
+
+                endif
+
+            else
+
+                if oPreco:nPreco < aPrecos[nPos]:nPreco
+
+                    oPreco := aPrecos[nPos]
+
+                endif
+                
+            endif
+
+        else
+
+            if lExistRegsTudoOk
+
+                if oPreco:nComissao < aPrecos[nPos]:nComissao
+
+                    oPreco := aPrecos[nPos]
+
+                endif
+
+            else
+
+                if oPreco:nComissao > aPrecos[nPos]:nComissao
+
+                    oPreco := aPrecos[nPos]
+
+                endif
+
+            endif
+
+        endif
+        
+    next
+
+    if lFilialCotacao .and. cTipoFrete == "C"
+        oPreco:nPreco := getPrecoCIF( jDadosProduto )
+    endif
+
+    oPrecoFinal := oPreco
+
+return oPrecoFinal
+
+static function getPrecoCIF( jDadosProduto as json ) as numeric
+
+    local cCodigoCliente        := jDadosProduto:getJsonObject('cliente')
+    local cLojaCliente          := jDadosProduto:getJsonObject('lojaCliente')
+    local cProduto              := jDadosProduto:getJsonObject('produto')
+    local nPrecoFOB             := jDadosProduto:getJsonObject('precoFOB')
+    local nFreteBase            := jDadosProduto:getJsonObject('valorFreteBase')
+    local nVlrDescarga          := jDadosProduto:getJsonObject('valorDescarga')
+    local cEstado               := jDadosProduto:getJsonObject('estadoDestino')
+    local nPrazoPgtoFrete       := jDadosProduto:getJsonObject('prazoPagtoFrete')
+    local nPesoTotalProdutos    := jDadosProduto:getJsonObject('pesoTotalProdutos')
+    local nQtdTotalPaletes      := jDadosProduto:getJsonObject('qtdTotalPaletes')
+    local cTipoCarga            := jDadosProduto:getJsonObject('tipoCarga') // 1 - Batida || 2 - PBR || 3 - Descartavel
+    local lDevolucaoPalete      := jDadosProduto:getJsonObject('devolucaoPalete') // .T. - Devolução de paletes no ato da entrega || .F. - Não devolução de paletes no ato da entrega
+    local nCargaMaxima          := jDadosProduto:getJsonObject('cargaMaxima') // Peso máximo da carga em kg
+
+    local nVlrFrete             := iif( nPesoTotalProdutos >= nCargaMaxima, nFreteBase, nFreteBase * (nCargaMaxima / nPesoTotalProdutos) )
+    local lInscEstadual         := !empty(posicione("SA1", 1, xFilial("SA1") + cCodigoCliente + cLojaCliente, "A1_INSCR"))
+    local nPesoUnitProduto      := posicione("SB1", 1, xFilial("SB1") + cProduto, "B1_PESO")
+    local nFreteTotal           := nVlrFrete + nVlrDescarga
+    local nPrecoPaletePbr       := 23.5
+    local nPrecoPaleteDescart   := 14.5
+    local nPrecoStretch         := 10.5
+    local nTxJurosBase          := 0.03
+    local nTxLucroSobFreteBase  := 0.025
+
+    local nAliqImpostosFederais := 0.035
+    local nAliqICMS             := iif( lInscEstadual , (iif( cEstado=='RN', 0, 0.06 )) , 0.25 )
+    local nTxJurosReal          := nTxJurosBase / 30 * nPrazoPgtoFrete
+    local nTxLucroSobFreteReal  := nTxLucroSobFreteBase / 30 * nPrazoPgtoFrete
+
+    local nPrecoPbrTon          := iif( !lDevolucaoPalete .and. left(cTipoCarga,1) == 'P', nQtdTotalPaletes * nPrecoPaletePbr / (nPesoTotalProdutos/1000), 0 )
+    local nPrecoDescartTon      := iif( !lDevolucaoPalete .and. left(cTipoCarga,1) == 'D', nQtdTotalPaletes * nPrecoPaleteDescart / (nPesoTotalProdutos/1000), 0 )
+    local nPrecoStretchTon      := iif( cTipoCarga != 'BT', nQtdTotalPaletes * nPrecoStretch / (nPesoTotalProdutos/1000), 0 )
+
+    local nFatorCorrecao        := 1 - (nTxJurosReal + nTxLucroSobFreteReal + nAliqImpostosFederais + nAliqICMS)
+
+    local nFreteEfetivo         := (nFreteTotal + nPrecoPbrTon + nPrecoDescartTon + nPrecoStretchTon) / nFatorCorrecao
+
+    local nPrecoCIF             := nPrecoFOB + (nFreteEfetivo * nPesoUnitProduto / 1000)
+
+    //aAdd( aDadosComplementares, nVlrFrete )
+    //aAdd( aDadosComplementares, nVlrDescarga )
+    //aAdd( aDadosComplementares, nFreteTotal )
+    //aAdd( aDadosComplementares, nFreteBase )
+    //aAdd( aDadosComplementares, nPrecoPbrTon )
+    //aAdd( aDadosComplementares, nPrecoDescartTon )
+    //aAdd( aDadosComplementares, nPrecoStretchTon )
+    //aAdd( aDadosComplementares, nFatorCorrecao )
+    //aAdd( aDadosComplementares, nFreteEfetivo )
+    //aAdd( aDadosComplementares, nPesoUnitProduto )
+    //aAdd( aDadosComplementares, nQtdTotalPaletes )
+    //aAdd( aDadosComplementares, nPesoTotalProdutos )
+    
+
+return Round(nPrecoCIF,2)

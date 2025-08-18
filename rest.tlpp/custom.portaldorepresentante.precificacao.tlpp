@@ -1,0 +1,133 @@
+#Include "tlpp-core.th"
+#Include "tlpp-rest.th"
+
+namespace custom.portaldorepresentante.precificacao
+
+@Post("portal-do-representante/precificacao/produto")
+user function getPrecificacaoProduto()
+
+    local jResponse         := JsonObject():new()       as json
+    local jBody             := JsonObject():new()       as json
+    local cBody             := oRest:getBodyRequest()   as character
+    local oPreco            := nil                      as object
+    local cCondPagto        := ""                       as character
+    local cCondPagtoFrete   := ""                       as character
+
+    //local cFilialOrc        := ""                       as character
+    local cProduto          := ""                       as character
+    //local cTipoFrete        := ""                       as character
+    //local nPrecoFOB         := 0                        as numeric
+    //local cCategCliente     := ""                       as character
+    //local nDiasPagto        := 0                        as numeric
+    //local nVolume           := 0                        as numeric
+    //local nVlrFaturamento   := 0                        as numeric
+
+    cBody := oRest:getBodyRequest()
+
+    if (!empty(cBody))
+
+        jBody:fromJson(cBody)
+
+        custom.portaldorepresentante.setenv.u_McSetEnv("10",jBody:getJsonObject('filial'))
+
+        //cFilialTab          := jBody:getJsonObject('filial')
+        cProduto            := jBody:getJsonObject('produto')
+        //cTipoFrete          := jBody:getJsonObject('tipoFrete')
+        //nPrecoFOB           := jBody:getJsonObject('precoFOB')
+        //cCategCliente       := jBody:getJsonObject('categoriaCliente')
+        //nVolume             := jBody:getJsonObject('volumeTotal')
+        //nVlrFaturamento     := jBody:getJsonObject('totalFaturamento')
+
+        cCondPagto          := jBody:getJsonObject('condPagamento')
+        cCondPagtoFrete     := jBody:getJsonObject('condPagFrete')
+
+        if getDiasPorCondPag( AllTrim(cCondPagto) ) != nil .and. !Empty(AllTrim(cCondPagto))
+
+            nDiasPagto := getDiasPorCondPag( AllTrim(cCondPagto) )
+
+            jBody['diasPagamento'] := nDiasPagto
+            jBody['prazoPagtoFrete'] := getDiasPorCondPag( AllTrim(cCondPagtoFrete) )
+            
+
+            oPreco = U_GetPrcTb( jBody )
+
+            if !empty(oPreco)
+
+                jResponse["success"]            := .T.
+                jResponse["message"]            := "Preço encontrado com sucesso."
+                jResponse["filial"]             := oPreco:cFilialPreco
+                jResponse["produto"]            := oPreco:cProduto
+                jResponse["precoUnitario"]      := oPreco:nPreco
+                jResponse["maxDiasPagamento"]   := oPreco:nMaxDiasPgto
+                jResponse["volumeMinimo"]       := oPreco:nVolumeMinimo
+                jResponse["faturamentoMinimo"]  := oPreco:nFatMinimo
+                jResponse["comissao"]           := oPreco:nComissao
+                jResponse["categorias"]         := oPreco:aCategorias
+                jResponse["chave"]              := oPreco:cChave
+                //jResponse["dadosComplementares"] := oPreco:aDadosComplementares
+                
+            else
+
+                jResponse["success"]    := .F.
+                jResponse["message"]    := "Preço não encontrado para o produto " + cProduto + " nas condições informadas."
+                jResponse["fix"]        := "Verifique o cadastro do produto e as condições de precificação nas tabelas de preço."
+
+            endif
+
+        else
+
+            jResponse["success"]    := .F.
+            jResponse["message"]    := "Condição de pagamento do orçamento inválida ou não encontrada."
+            jResponse["fix"]        := "Informe uma condição de pagamento válida."
+        
+        endif
+
+    else
+
+        jResponse["success"]    := .F.
+        jResponse["message"]    := "Body da requisição vazio."
+        jResponse["fix"]        := "Verifique os dados enviados na requisição."
+
+    endif
+
+    oRest:setKeyHeaderResponse("Content-Type","application/json")
+    oRest:setResponse(jResponse:toJson())
+
+return
+
+static function getDiasPorCondPag(cCondPagto as character)
+
+    local nDias     := 0                        as numeric
+    local aDias     := {}                       as array
+    local nSoma     := 0                        as numeric
+    local aArea     := GetArea()                as array
+    local cFiltro   := ""                       as character
+    local nPos      := 0                        as numeric
+    local nTamCampo := tamSX3("E4_COND")[1]     as numeric
+
+    cFiltro := "SE4->E4_YPRUSAD == 'S' .and. SE4->E4_MSBLQL != '1'"
+
+    dbSelectArea("SE4")
+    SE4->(dbSetFilter( {|| &(cFiltro)}, cFiltro ))
+    SE4->(dbSetOrder(1))
+    SE4->(dbGoTop())
+
+    if !SE4->(dbSeek(xFilial("SE4")+padR(cCondPagto,nTamCampo), .T.))
+
+        return nil
+
+    endif
+
+    aDias := strTokArr2(allTrim(SE4->E4_COND), ",", .F.)
+
+    for nPos := 1 to len(aDias)
+
+        nSoma += val(AllTrim(aDias[nPos]))
+
+    next
+
+    nDias := nSoma / len(aDias)
+
+    RestArea(aArea)
+
+return nDias

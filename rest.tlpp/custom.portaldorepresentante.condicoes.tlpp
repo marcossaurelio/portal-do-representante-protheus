@@ -1,0 +1,134 @@
+#Include "tlpp-core.th"
+#Include "tlpp-rest.th"
+
+namespace custom.portaldorepresentante.condicoes
+
+@Get("portal-do-representante/condicoes/")
+user function getCondicoes()
+
+    local jResponse     := JsonObject():New()       as json
+    local jPath         := JsonObject():New()       as json
+    local cQuery        := ""                       as character
+    local cAlias        := ""                       as character
+    local cFiltro       := ""                       as character
+    local cPagina       := ""                       as character
+    local cTamPagina    := ""                       as character
+    local nContador     := 0                        as numeric
+    local jItem                                     as json
+
+    custom.portaldorepresentante.setenv.u_McSetEnv()
+
+    jPath := oRest:getQueryRequest() // Parametros passados via query string
+
+    cFiltro     := jPath:getJsonObject('filter')
+    cPagina     := jPath:getJsonObject('page')
+    cTamPagina  := jPath:getJsonObject('pageSize')
+    
+    cQuery := getQueryCondicoes(cFiltro,cPagina,cTamPagina)
+
+    cAlias := getNextAlias()
+
+    MPSysOpenQuery(cQuery,cAlias)
+
+    dbSelectArea(cAlias)
+    (cAlias)->(dbGoTop())
+
+    jResponse['items'] = {}
+
+    nContador := 0
+
+    while !(cAlias)->(eof()) .and. iif(!empty(cTamPagina),nContador < val(cTamPagina),.T.)
+
+        jItem := JsonObject():New()
+
+        jItem['codigo']         := (cAlias)->E4_CODIGO
+        jItem['descricao']      := allTrim((cAlias)->E4_DESCRI)
+
+        aAdd(jResponse['items'],jItem)
+
+        (cAlias)->(dbSkip())
+
+        nContador++
+
+    enddo
+
+    jResponse['hasNext'] = !(cAlias)->(eof())
+
+    oRest:setKeyHeaderResponse("Content-Type","application/json")
+    oRest:setResponse(jResponse:toJson())
+
+    (cAlias)->(DbCloseArea())
+
+return
+
+
+@Get("portal-do-representante/condicoes/:codigo")
+user function getCondicao()
+
+    local jResponse         := JsonObject():New()       as json
+    local jPath             := JsonObject():New()       as json
+    local aAreaSE4          := {}                       as array
+    local cCodigoCondicao   := ""                       as character
+    local cFiltro           := ""                       as character
+
+    custom.portaldorepresentante.setenv.u_McSetEnv()
+
+    jPath := oRest:getPathParamsRequest() // Parametros passados via query string
+
+    aAreaSE4 := SE4->(getArea())
+
+    cCodigoCondicao  := allTrim(jPath['codigo'])
+
+    aAreaSE4 := SE4->(GetArea())
+    cFiltro := "SE4->E4_YPRUSAD == 'S' .and. SE4->E4_MSBLQL != '1'"
+    
+    dbSelectArea("SE4")
+    SE4->(dbSetFilter( {|| &(cFiltro)}, cFiltro ))
+    SE4->(dbSetOrder(1))
+    SE4->(dbGoTop())
+
+    if SE4->(dbSeek(xFilial("SE4")+cCodigoCondicao, .T.))
+
+        jResponse['success']        := .T.
+        jResponse['message']        := "Condição de pagamento encontrada com sucesso"
+        jResponse['codigo']         := SE4->E4_CODIGO
+        jResponse['descricao']      := allTrim(SE4->E4_DESCRI)
+        jResponse['prazo']          := val(allTrim(SE4->E4_COND))
+
+    else
+
+        jResponse['success']        := .F.
+        jResponse["message"]        := "Condição de pagamento não encontrada na base de dados"
+        
+    endif
+
+    self:setContentType('application/json')
+    self:setResponse(jResponse:toJson())
+
+    SE4->(dbClearFilter())
+    restArea(aAreaSE4)
+
+return
+
+
+static function getQueryCondicoes(cFiltro,cPagina,cTamPagina)
+
+    local cQuery        := ""
+
+    cQuery += " SELECT *
+    cQuery += " FROM " + retSQLName("SE4")
+    cQuery += " WHERE D_E_L_E_T_ = ' ' AND E4_MSBLQL != '1' AND E4_YPRUSAD = 'S'
+
+    if !empty(cFiltro)
+        cQuery += " AND (E4_CODIGO LIKE '%" + upper(cFiltro) + "%' OR E4_DESCRI LIKE '%" + upper(cFiltro) + "%')
+    endif
+
+    cQuery += " ORDER BY E4_COND
+
+    if !empty(cPagina) .and. !empty(cTamPagina)
+        cQuery += " OFFSET ("+cPagina+" - 1) * "+cTamPagina+" ROWS
+        cQuery += " FETCH NEXT "+str(val(cTamPagina)+1)+" ROWS ONLY
+    endif
+
+
+return cQuery
