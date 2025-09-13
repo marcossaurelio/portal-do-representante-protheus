@@ -81,20 +81,20 @@ WsMethod Post FrMar WsService frete
     local cTipoContainer        := ""                       as character
     local nPayloadUtilizado     := 0                        as numeric
 
-    local nPrcC20Geral  := GetNewPar("MS_PRFGE20",194.80)   as numeric
-    local nPyldC20Geral := GetNewPar("MS_PLFGE20",28.2)     as numeric
-    local nPrcC40Geral  := GetNewPar("MS_PRFGE40",194.80)   as numeric
-    local nPyldC40Geral := GetNewPar("MS_PLFGE40",28.2)     as numeric
+    local nPrcC20Geral  := U_DefPort("PRCFRC20GE",194.80)   as numeric
+    local nPyldC20Geral := U_DefPort("PLDFRC20GE",28.2)     as numeric
+    local nPrcC40Geral  := U_DefPort("PRCFRC40GE",194.80)   as numeric
+    local nPyldC40Geral := U_DefPort("PLDFRC40GE",28.2)     as numeric
 
-    local nPrcC20RJ     := GetNewPar("MS_PRFRJ20",276.26)   as numeric
-    local nPyldC20RJ    := GetNewPar("MS_PLFRJ20",28.2)     as numeric
-    local nPrcC40RJ     := GetNewPar("MS_PRFRJ40",306.00)   as numeric
-    local nPyldC40RJ    := GetNewPar("MS_PLFRJ40",28.2)     as numeric
+    local nPrcC20RJ     := U_DefPort("PRCFRC20RJ",276.26)   as numeric
+    local nPyldC20RJ    := U_DefPort("PLDFRC20RJ",28.2)     as numeric
+    local nPrcC40RJ     := U_DefPort("PRCFRC40RJ",306.00)   as numeric
+    local nPyldC40RJ    := U_DefPort("PLDFRC40RJ",28.2)     as numeric
 
-    local nPrcC20SP     := GetNewPar("MS_PRFSP20",280.44)   as numeric
-    local nPyldC20SP    := GetNewPar("MS_PLFSP20",27.0)     as numeric
-    local nPrcC40SP     := GetNewPar("MS_PRFSP40",293.49)   as numeric
-    local nPyldC40SP    := GetNewPar("MS_PLFSP40",27.5)     as numeric
+    local nPrcC20SP     := U_DefPort("PRCFRC20SP",280.44)   as numeric
+    local nPyldC20SP    := U_DefPort("PLDFRC20SP",27.0)     as numeric
+    local nPrcC40SP     := U_DefPort("PRCFRC40SP",293.49)   as numeric
+    local nPyldC40SP    := U_DefPort("PLDFRC40SP",27.5)     as numeric
 
     local lRet          := .T.
 

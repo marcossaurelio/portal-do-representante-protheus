@@ -6,31 +6,35 @@ class zPrcTab
     //Atributos da classe zPrcTab
     public data cFilialPreco
     public data cProduto
+    public data nPrecoBase
     public data nPreco
     public data nMaxDiasPgto
     public data nVolumeMinimo
     public data nFatMinimo
     public data nComissao
     public data aCategorias
+    public data cTipoPreco
     public data cChave
     //public data aDadosComplementares
   
     //Métodos da classe zPrcTab
-    public method New(cFilialPreco, cProduto, nPreco, nComissao, nMaxDiasPgto, nVolumeMinimo, nFatMinimo, aCategorias, cChave)
+    public method New(cFilialPreco, cProduto, nPrecoBase, nPreco, nComissao, nMaxDiasPgto, nVolumeMinimo, nFatMinimo, aCategorias, cTipoPreco, cChave)
 
 endclass
 
-method New(cFilialPreco, cProduto, nPreco, nComissao, nMaxDiasPgto, nVolumeMinimo, nFatMinimo, aCategorias, cChave) class zPrcTab
+method New(cFilialPreco, cProduto, nPrecoBase, nPreco, nComissao, nMaxDiasPgto, nVolumeMinimo, nFatMinimo, aCategorias, cTipoPreco, cChave) class zPrcTab
 
     //Atribuindo valores nos atributos do objeto instanciado
     ::cFilialPreco      := cFilialPreco
     ::cProduto          := cProduto
+    ::nPrecoBase        := nPrecoBase
     ::nPreco            := nPreco
     ::nMaxDiasPgto      := nMaxDiasPgto
     ::nVolumeMinimo     := nVolumeMinimo
     ::nFatMinimo        := nFatMinimo
     ::nComissao         := nComissao
     ::aCategorias       := aCategorias
+    ::cTipoPreco        := cTipoPreco
     ::cChave            := cChave
     
 return self //Retorna o objeto instanciado

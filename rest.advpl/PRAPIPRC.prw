@@ -26,10 +26,8 @@ WsMethod Post PrPrd WsService precificacao
 
     if getDiasPorCondPag( AllTrim(cCondPg) ) != nil .and. !Empty(AllTrim(cCondPg))
 
-        nDiasPagto := getDiasPorCondPag( AllTrim(cCondPg) )
-
-        jBody['diasPagamento'] := nDiasPagto
-        jBody['prazoPagtoFrete'] := getDiasPorCondPag( AllTrim(cCondPgFrete) )
+        jBody['prazoPagtoFrete']    := getDiasPorCondPag( AllTrim(cCondPgFrete) )
+        jBody['prazoPagtoProduto']  := getDiasPorCondPag( AllTrim(cCondPg) )
         
         oPreco = U_GetPrcTb( jBody )
 
@@ -39,12 +37,14 @@ WsMethod Post PrPrd WsService precificacao
             jResponse["message"]            := "Preço encontrado com sucesso."
             jResponse["filial"]             := oPreco:cFilialPreco
             jResponse["produto"]            := oPreco:cProduto
+            jResponse["precoBase"]          := oPreco:nPrecoBase
             jResponse["precoUnitario"]      := oPreco:nPreco
             jResponse["maxDiasPagamento"]   := oPreco:nMaxDiasPgto
             jResponse["volumeMinimo"]       := oPreco:nVolumeMinimo
             jResponse["faturamentoMinimo"]  := oPreco:nFatMinimo
             jResponse["comissao"]           := oPreco:nComissao
             jResponse["categorias"]         := oPreco:aCategorias
+            jResponse["tipoPreco"]          := oPreco:cTipoPreco
             jResponse["chave"]              := oPreco:cChave
             
         else

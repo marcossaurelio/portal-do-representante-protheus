@@ -73,6 +73,7 @@ WsMethod Post Orcs WsService orcamentos
         jRegistro['pedido']         := (cAlias)->C5_NUM
         jRegistro['situacaoPedido'] := iif( !empty((cAlias)->C5_NUM), iif( !empty((cAlias)->C5_NOTA) .And. !("X" $ (cAlias)->C5_NOTA), "F", "C" ), nil)
         jRegistro['dataVencimento'] := (cAlias)->CJ_VALIDA
+        jRegistro['dataAlteracao']  := (cAlias)->CJ_YDTALTE
 
         aAdd(jResponse['objects'],jRegistro)
 
@@ -95,6 +96,7 @@ WsMethod Get OrcDt WsService orcamentos
     local cAliasItens       := ""                       as character
     local cFilialCar        := ""                       as character
     local cOrcamento        := ""                       as character
+    local cCliLoja          := ""                       as character
     local jItem                                         as json
     local lRet              := .T.
 
@@ -118,12 +120,14 @@ WsMethod Get OrcDt WsService orcamentos
     dbSelectArea(cAliasCabecalho)
     (cAliasCabecalho)->(dbGoTop())
 
+    cCliLoja := (cAliasCabecalho)->CJ_CLIENTE + (cAliasCabecalho)->CJ_LOJA
+
     jResponse['filial']             := (cAliasCabecalho)->CJ_FILIAL
     jResponse['orcamento']          := (cAliasCabecalho)->CJ_NUM
     jResponse['situacao']           := iif( sToD((cAliasCabecalho)->CJ_VALIDA) < date() .And. (cAliasCabecalho)->CJ_YPRSITU $ "CP;PP", "EX", (cAliasCabecalho)->CJ_YPRSITU )
     jResponse['cliente']            := (cAliasCabecalho)->CJ_CLIENTE
     jResponse['loja']               := (cAliasCabecalho)->CJ_LOJA
-    jResponse['nomeCliente']        := posicione("SA1",1,xFilial("SA1") + (cAliasCabecalho)->CJ_CLIENTE + (cAliasCabecalho)->CJ_LOJA,"A1_NOME")
+    jResponse['nomeCliente']        := posicione("SA1",1,xFilial("SA1") + cCliLoja,"A1_NOME")
     jResponse['dataEmissao']        := (cAliasCabecalho)->CJ_EMISSAO
     jResponse['condPag']            := (cAliasCabecalho)->CJ_CONDPAG
     jResponse['observacao']         := (cAliasCabecalho)->CJ_YOBS
@@ -143,6 +147,8 @@ WsMethod Get OrcDt WsService orcamentos
     jResponse['descontoFinanceiro'] := (cAliasCabecalho)->CJ_YDESCF
     jResponse['tipoDescarga']       := (cAliasCabecalho)->CJ_YDESCAR
     jResponse['veiculoProprio']     := iif( (cAliasCabecalho)->CJ_YVEIPRO == "S", .T., .F. )
+    jResponse['devolucaoPalete']    := (cAliasCabecalho)->CJ_YDEVPAL == "S"
+    jResponse['icmsPautaFrete']     := Posicione("SA1",1,xFilial("SA1")+cCliLoja,"A1_XVLRFRT") / 2 * (U_DefPort("ICMSPAUTFR",12)/100)
     jResponse['itens']          := {}
 
     MPSysOpenQuery(aQuery[2],cAliasItens)
@@ -559,7 +565,7 @@ static function qryBrowse(cPagina, cVendedor, cFiltro)
     if !empty(cFiltro)
         cQuery += " AND " + cFiltro
     endif
-    cQuery += " ORDER BY CJ_YDTALTE,SCJ.R_E_C_N_O_ DESC
+    cQuery += " ORDER BY CJ_FILIAL,CJ_NUM
     //cQuery += " OFFSET ("+cPagina+" - 1) * "+cTamPagina+" ROWS
     //cQuery += " FETCH NEXT "+cTamPagina+" ROWS ONLY;
 
@@ -600,7 +606,7 @@ return {cQueryCabecalho,cQueryItens}
 static function arrayCabecalho(jBody as json) as array
 
     local aCabecalho        := {} as array
-    local nDiasVencimento   := GetNewPar("MS_DVENCOR",7)
+    local nDiasVencimento   := U_DefPort("VENCORCAME",7)
 
     iif( !empty(jBody:getJsonObject('filial')),             aAdd( aCabecalho, { "CJ_FILIAL",    jBody:getJsonObject('filial'),              nil } ) , nil )
     iif( !empty(jBody:getJsonObject('orcamento')),          aAdd( aCabecalho, { "CJ_NUM",       jBody:getJsonObject('orcamento'),           nil } ) , nil )
@@ -626,7 +632,8 @@ static function arrayCabecalho(jBody as json) as array
     iif( !empty(jBody:getJsonObject('descontoFinanceiro')), aAdd( aCabecalho, { "CJ_YDESCF",    jBody:getJsonObject('descontoFinanceiro'),  nil } ) , nil )
     iif( !empty(jBody:getJsonObject('tipoDescarga')),       aAdd( aCabecalho, { "CJ_YDESCAR",   jBody:getJsonObject('tipoDescarga'),        nil } ) , nil )
     iif( !empty(jBody:getJsonObject('veiculoProprio')),     aAdd( aCabecalho, { "CJ_YVEIPRO",   jBody:getJsonObject('veiculoProprio'),      nil } ) , nil )
-    iif( !empty(jBody:getJsonObject('responsavelFrete')),   aAdd( aCabecalho, { "CJ_YRESPFR",   iif( jBody:getJsonObject('responsavelFrete') == "1", .T., .F. ),    nil } ) , nil )
+    iif( !empty(jBody:getJsonObject('devolucaoPalete')),    aAdd( aCabecalho, { "CJ_YDEVPAL",   jBody:getJsonObject('devolucaoPalete'),     nil } ) , nil )
+    iif( !empty(jBody:getJsonObject('responsavelFrete')),   aAdd( aCabecalho, { "CJ_YRESPFR",   jBody:getJsonObject('responsavelFrete')=="1",   nil } ) , nil )
     
     aAdd(aCabecalho, { "CJ_YDTALTE",    date(),                 nil })
     aAdd(aCabecalho, { "CJ_VALIDA",     date()+nDiasVencimento, nil })

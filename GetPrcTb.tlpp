@@ -8,7 +8,7 @@ user function getPrcTb( jDadosProduto )
     local cTipoFrete        := jDadosProduto:getJsonObject('tipoFrete')
     local nPrecoFOB         := jDadosProduto:getJsonObject('precoFOB')
     local cCategCliente     := jDadosProduto:getJsonObject('categoriaCliente')
-    local nDiasPagto        := jDadosProduto:getJsonObject('diasPagamento')
+    local nDiasPagto        := jDadosProduto:getJsonObject('prazoPagtoProduto')
     local nVolume           := jDadosProduto:getJsonObject('volumeTotal')
     local nVlrFaturamento   := jDadosProduto:getJsonObject('totalFaturamento')
 
@@ -28,14 +28,13 @@ user function getPrcTb( jDadosProduto )
     local aCategorias       := {}
     local cChave            := ""
     local nPos              := 0
-    local oPreco            := nil
     local oPrecoFinal       := nil
     local aPrecos           := {}
     local aDescartar        := {}
     local lExistRegsTudoOk  := .T.
-    local lFilialCotacao    := cFilialOrc == "01010001"
 
-    //private aDadosComplementares := {}
+    private oPreco            := nil
+    private lFilialCotacao    := cFilialOrc $ "01010001;01010002;01010003;02010001;03010001"
 
     cQuery += " SELECT *
     cQuery += " FROM
@@ -44,7 +43,7 @@ user function getPrcTb( jDadosProduto )
     cQuery += "     " + retSQLName("DA0") + " DA0 ON DA0_FILIAL = DA1_FILIAL AND DA0_CODTAB = DA1_CODTAB AND DA0.D_E_L_E_T_ = ' '
     cQuery += " WHERE
     cQuery += "     DA0_DATDE <= " + dToS(date()) + " AND (DA0_DATATE >= " + dToS(date()) + " OR DA0_DATATE = ' ') AND DA0_ATIVO = '1'
-    cQuery += "     AND DA0_YPOREP = 'S' AND (DA0_YCATEG LIKE '%" + cCategCliente + "%' OR DA0_YCATEG = ' ')
+    cQuery += "     AND DA0_YPOREP = 'S' AND (TRIM(DA0_YCATEG) LIKE '%" + cCategCliente + "%' OR DA0_YCATEG = ' ')
     cQuery += "     AND DA0_YFRETE = '" + iif( lFilialCotacao, "F", cTipoFrete ) + "' AND DA0_YMAXDP >= " + cValToChar(nDiasPagto)
     cQuery += "     AND DA1.D_E_L_E_T_ = ' ' AND DA1_FILIAL = '" + left(cFilialOrc,4) + "' AND DA1_CODPRO = '" + allTrim(cProduto) + "'
     cQuery += "     AND DA1_ATIVO = '1' AND DA1_DATVIG <= " + dToS(date())
@@ -68,7 +67,7 @@ user function getPrcTb( jDadosProduto )
         nVolumeMinimo   := (cAlias)->DA0_YVLMIN
         nFatMinimo      := (cAlias)->DA0_YFATMI
         nMaxDiasPgto    := (cAlias)->DA0_YMAXDP
-        aCategorias     := iif( empty((cAlias)->DA0_YCATEG), {}, strTokArr2(allTrim((cAlias)->DA0_YCATEG),";") )
+        aCategorias     := iif( empty((cAlias)->DA0_YCATEG), {}, strTokArr2(allTrim((cAlias)->DA0_YCATEG)," ") )
         nComissao       := (cAlias)->DA0_YCOMIS
         cChave          := ""
 
@@ -137,7 +136,7 @@ user function getPrcTb( jDadosProduto )
             loop
         endif
 
-        oPreco := zPrcTab():New( cFilialOrc, cProduto, nPreco, nComissao, nMaxDiasPgto, nVolumeMinimo, nFatMinimo, aCategorias, cChave )
+        oPreco := zPrcTab():New( cFilialOrc, cProduto, nPreco, nPreco, nComissao, nMaxDiasPgto, nVolumeMinimo, nFatMinimo, aCategorias, cTipoPreco, cChave )
 
         aAdd(aPrecos, oPreco)
 
@@ -155,9 +154,7 @@ user function getPrcTb( jDadosProduto )
 
         oPreco := aPrecos[1]
 
-        if lFilialCotacao .and. cTipoFrete == "C"
-            oPreco:nPreco := getPrecoCIF( jDadosProduto )
-        endif
+        oPreco:nPreco := getPrecoCorrigido( jDadosProduto )
 
         oPrecoFinal := oPreco
         //oPrecoFinal:aDadosComplementares := aDadosComplementares
@@ -275,67 +272,61 @@ user function getPrcTb( jDadosProduto )
         
     next
 
-    if lFilialCotacao .and. cTipoFrete == "C"
-        oPreco:nPreco := getPrecoCIF( jDadosProduto )
-    endif
+    oPreco:nPreco := getPrecoCorrigido( jDadosProduto )
 
     oPrecoFinal := oPreco
 
 return oPrecoFinal
 
-static function getPrecoCIF( jDadosProduto as json ) as numeric
+
+static function getPrecoCorrigido( jDadosProduto as json ) as numeric
 
     local cCodigoCliente        := jDadosProduto:getJsonObject('cliente')
     local cLojaCliente          := jDadosProduto:getJsonObject('lojaCliente')
     local cProduto              := jDadosProduto:getJsonObject('produto')
-    local nPrecoFOB             := jDadosProduto:getJsonObject('precoFOB')
-    local nFreteBase            := jDadosProduto:getJsonObject('valorFreteBase')
+    local nPrecoTabela          := oPreco:nPreco
+    local cTipoFrete            := jDadosProduto:getJsonObject('tipoFrete')
+    local cTipoPreco            := oPreco:cTipoPreco
+    local nFreteBase            := iif( cTipoFrete == "C", jDadosProduto:getJsonObject('valorFreteBase'), 0 )
     local nVlrDescarga          := jDadosProduto:getJsonObject('valorDescarga')
     local cEstado               := jDadosProduto:getJsonObject('estadoDestino')
     local nPrazoPgtoFrete       := jDadosProduto:getJsonObject('prazoPagtoFrete')
+    local nPrazoPagtoProduto    := jDadosProduto:getJsonObject('prazoPagtoProduto')
     local nPesoTotalProdutos    := jDadosProduto:getJsonObject('pesoTotalProdutos')
     local nQtdTotalPaletes      := jDadosProduto:getJsonObject('qtdTotalPaletes')
     local cTipoCarga            := jDadosProduto:getJsonObject('tipoCarga') // 1 - Batida || 2 - PBR || 3 - Descartavel
-    local lDevolucaoPalete      := jDadosProduto:getJsonObject('devolucaoPalete') // .T. - Devolução de paletes no ato da entrega || .F. - Não devolução de paletes no ato da entrega
+    local lDevolucaoPalete      := jDadosProduto:getJsonObject('devolucaoPalete') == "S" // .T. - Devolução de paletes no ato da entrega || .F. - Não devolução de paletes no ato da entrega
     local nCargaMaxima          := jDadosProduto:getJsonObject('cargaMaxima') // Peso máximo da carga em kg
+    local nDescontoFinanceiro   := jDadosProduto:getJsonObject('descontoFinanceiro')/100
+    local lForro                := cTipoCarga == "PC" .or. cTipoCarga == "DC" // .T. - Possui Forro || .F. - Não possui Forro
 
     local nVlrFrete             := iif( nPesoTotalProdutos >= nCargaMaxima, nFreteBase, nFreteBase * (nCargaMaxima / nPesoTotalProdutos) )
     local lInscEstadual         := !empty(posicione("SA1", 1, xFilial("SA1") + cCodigoCliente + cLojaCliente, "A1_INSCR"))
     local nPesoUnitProduto      := posicione("SB1", 1, xFilial("SB1") + cProduto, "B1_PESO")
     local nFreteTotal           := nVlrFrete + nVlrDescarga
-    local nPrecoPaletePbr       := 23.5
-    local nPrecoPaleteDescart   := 14.5
-    local nPrecoStretch         := 10.5
-    local nTxJurosBase          := 0.03
-    local nTxLucroSobFreteBase  := 0.025
+    local nPrecoPaletePbr       := U_DefPort("PRCOPLTPBR",23.5)
+    local nPrecoPaleteDescart   := U_DefPort("PRCOPLTPBR",14.5)
+    local nPrecoStretch         := U_DefPort("PRCSTRETCH",10.5)
+    local nPrecoForro           := U_DefPort("PRECOFORRO",0.0)
+    local nTxJurosBase          := U_DefPort("TXJUROSBAS",3)/100
+    local nTxLucroSobFreteBase  := U_DefPort("TXLUCSOBFR",2.5)/100
 
-    local nAliqImpostosFederais := 0.035
-    local nAliqICMS             := iif( lInscEstadual , (iif( cEstado=='RN', 0, 0.06 )) , 0.25 )
-    local nTxJurosReal          := nTxJurosBase / 30 * nPrazoPgtoFrete
+    local nAliqImpostosFederais := U_DefPort("ALIQIMPFED",0.035)
+    local nAliqICMS             := iif( lFilialCotacao, iif( lInscEstadual, iif( cEstado=='RN', 0, U_DefPort("ALIQUOICMS",6)/100 ) , 0.25 ), 0 )
+    local nTxJurosSobFrete      := nTxJurosBase / 30 * nPrazoPgtoFrete
+    local nTxJurosSobProdutos   := iif( cTipoPreco != "P" , nTxJurosBase / 30 * nPrazoPagtoProduto , 0 )
     local nTxLucroSobFreteReal  := nTxLucroSobFreteBase / 30 * nPrazoPgtoFrete
 
     local nPrecoPbrTon          := iif( !lDevolucaoPalete .and. left(cTipoCarga,1) == 'P', nQtdTotalPaletes * nPrecoPaletePbr / (nPesoTotalProdutos/1000), 0 )
     local nPrecoDescartTon      := iif( !lDevolucaoPalete .and. left(cTipoCarga,1) == 'D', nQtdTotalPaletes * nPrecoPaleteDescart / (nPesoTotalProdutos/1000), 0 )
     local nPrecoStretchTon      := iif( cTipoCarga != 'BT', nQtdTotalPaletes * nPrecoStretch / (nPesoTotalProdutos/1000), 0 )
+    local nPrecoForroTon        := iif( lForro, nQtdTotalPaletes * nPrecoForro / (nPesoTotalProdutos/1000), 0 )
 
-    local nFatorCorrecao        := 1 - (nTxJurosReal + nTxLucroSobFreteReal + nAliqImpostosFederais + nAliqICMS)
+    local nFatorCorrecaoFrete   := 1 - (nTxJurosSobFrete + nTxLucroSobFreteReal + nAliqImpostosFederais + nAliqICMS)
+    local nFatorCorrecaoProd    := 1 - (nTxJurosSobProdutos + nDescontoFinanceiro)
 
-    local nFreteEfetivo         := (nFreteTotal + nPrecoPbrTon + nPrecoDescartTon + nPrecoStretchTon) / nFatorCorrecao
+    local nFreteEfetivo         := (nFreteTotal + nPrecoPbrTon + nPrecoDescartTon + nPrecoStretchTon + nPrecoForroTon) / nFatorCorrecaoFrete
 
-    local nPrecoCIF             := nPrecoFOB + (nFreteEfetivo * nPesoUnitProduto / 1000)
+    local nPrecoCorrigido       := nPrecoTabela / nFatorCorrecaoProd + (nFreteEfetivo * nPesoUnitProduto / 1000)
 
-    //aAdd( aDadosComplementares, nVlrFrete )
-    //aAdd( aDadosComplementares, nVlrDescarga )
-    //aAdd( aDadosComplementares, nFreteTotal )
-    //aAdd( aDadosComplementares, nFreteBase )
-    //aAdd( aDadosComplementares, nPrecoPbrTon )
-    //aAdd( aDadosComplementares, nPrecoDescartTon )
-    //aAdd( aDadosComplementares, nPrecoStretchTon )
-    //aAdd( aDadosComplementares, nFatorCorrecao )
-    //aAdd( aDadosComplementares, nFreteEfetivo )
-    //aAdd( aDadosComplementares, nPesoUnitProduto )
-    //aAdd( aDadosComplementares, nQtdTotalPaletes )
-    //aAdd( aDadosComplementares, nPesoTotalProdutos )
-    
-
-return Round(nPrecoCIF,2)
+return Round(nPrecoCorrigido,2)

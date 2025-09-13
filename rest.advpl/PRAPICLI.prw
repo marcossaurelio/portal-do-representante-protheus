@@ -133,7 +133,7 @@ WsMethod Get Clnt WsService clientes
             jResponse['categoria']      := allTrim(SA1->A1_YCATEGO)
             jResponse['tipo']           := SA1->A1_PESSOA
             jResponse['municipio']      := SA1->A1_COD_MUN
-            jResponse['fretePauta']     := SA1->A1_XVLRFRT
+            jResponse['icmsPautaFrete'] := SA1->A1_XVLRFRT / 2 * (U_DefPort("ICMSPAUTFR",12)/100)
 
         else
 
