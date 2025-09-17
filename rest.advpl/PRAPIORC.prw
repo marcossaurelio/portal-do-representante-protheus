@@ -141,7 +141,7 @@ WsMethod Get OrcDt WsService orcamentos
     jResponse['paletizacao30x1']    := (cAliasCabecalho)->CJ_YPP30X1
     jResponse['paletizacao25kg']    := (cAliasCabecalho)->CJ_YPP25KG
     jResponse['tipoVeiculo']        := (cAliasCabecalho)->CJ_YTPVEIC
-    jResponse['responsavelFrete']   := (cAliasCabecalho)->CJ_YRESPFR
+    jResponse['responsavelFrete']   := (cAliasCabecalho)->CJ_YRESPFR == "T"
     jResponse['estadoDestino']      := (cAliasCabecalho)->CJ_YUFDEST
     jResponse['cidadeDestino']      := (cAliasCabecalho)->CJ_YMUNDES
     jResponse['descontoFinanceiro'] := (cAliasCabecalho)->CJ_YDESCF

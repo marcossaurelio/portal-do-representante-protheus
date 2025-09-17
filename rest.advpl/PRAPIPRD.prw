@@ -126,9 +126,11 @@ static function getQueryProdutos(cFiltro,cPagina,cTamPagina)
     local cQuery        := ""
 
     cQuery += " SELECT DISTINCT SB1.*
-    cQuery += " FROM " + retSQLName("SB1")
+    cQuery += " FROM " + retSQLName("SB1") + " SB1
     cQuery += " WHERE D_E_L_E_T_ = ' ' AND B1_MSBLQL != '1'
-    cQuery += " AND B1_COD IN (SELECT DISTINCT DA1_CODPRO FROM " + retSQLName("DA1") + " WHERE D_E_L_E_T_ = ' ' AND DA1_YPOREP = 'S' AND DA1_FILIAL = '" + xFilial("DA1") + "')
+    cQuery += " AND B1_COD IN (SELECT DISTINCT DA1_CODPRO FROM " + retSQLName("DA1") + " DA1
+    cQuery += " INNER JOIN " + retSQLName("DA0") + " DA0 ON DA0.D_E_L_E_T_ = ' ' AND DA0_FILIAL = DA1_FILIAL AND DA0_CODTAB = DA1_CODTAB
+    cQuery += " WHERE DA1.D_E_L_E_T_ = ' ' AND DA0_YPOREP = 'S' AND DA1_FILIAL = '" + xFilial("DA1") + "')
 
     if !empty(cFiltro)
         cQuery += " AND (B1_COD LIKE '%" + upper(cFiltro) + "%' OR B1_DESC LIKE '%" + upper(cFiltro) + "%' OR B1_YMARCA LIKE '%" + upper(cFiltro) + "%')

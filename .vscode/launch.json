@@ -30,8 +30,11 @@
 		},
 		{
 			"label": "U_M415CANC"
+		},
+		{
+			"label": "U_xxteste"
 		}
 	],
-	"lastProgramExecuted": "U_M415CANC",
+	"lastProgramExecuted": "U_xxteste",
 	"lastProgramArguments": []
 }

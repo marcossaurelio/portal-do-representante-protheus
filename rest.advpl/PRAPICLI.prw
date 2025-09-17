@@ -129,7 +129,7 @@ WsMethod Get Clnt WsService clientes
             jResponse['nomeFantasia']   := allTrim(SA1->A1_NREDUZ)
             jResponse['estado']         := SA1->A1_EST
             jResponse['cidade']         := SA1->A1_COD_MUN
-            jResponse['ie']             := SA1->A1_INSCR
+            jResponse['ie']             := AllTrim(SA1->A1_INSCR)
             jResponse['categoria']      := allTrim(SA1->A1_YCATEGO)
             jResponse['tipo']           := SA1->A1_PESSOA
             jResponse['municipio']      := SA1->A1_COD_MUN

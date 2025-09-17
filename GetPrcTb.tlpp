@@ -312,7 +312,8 @@ static function getPrecoCorrigido( jDadosProduto as json ) as numeric
     local nTxLucroSobFreteBase  := U_DefPort("TXLUCSOBFR",2.5)/100
 
     local nAliqImpostosFederais := U_DefPort("ALIQIMPFED",0.035)
-    local nAliqICMS             := iif( lFilialCotacao, iif( lInscEstadual, iif( cEstado=='RN', 0, U_DefPort("ALIQUOICMS",6)/100 ) , 0.25 ), 0 )
+    local nAliqICMSFrete        := iif( lFilialCotacao, iif( lInscEstadual, iif( cEstado=='RN', 0, U_DefPort("ALIQUOICMS",6)/100 ) , getAliqICMS(cEstado)/100 ), 0 )
+    local nAliqICMSProdutos     := iif( lFilialCotacao, iif( lInscEstadual, iif( cEstado=='RN', U_DefPort("ALIQUOICMS",6)/100*(-1), 0 ) , (getAliqICMS(cEstado)-U_DefPort("ALIQUOICMS",6))/100 ), 0 )
     local nTxJurosSobFrete      := nTxJurosBase / 30 * nPrazoPgtoFrete
     local nTxJurosSobProdutos   := iif( cTipoPreco != "P" , nTxJurosBase / 30 * nPrazoPagtoProduto , 0 )
     local nTxLucroSobFreteReal  := nTxLucroSobFreteBase / 30 * nPrazoPgtoFrete
@@ -322,11 +323,57 @@ static function getPrecoCorrigido( jDadosProduto as json ) as numeric
     local nPrecoStretchTon      := iif( cTipoCarga != 'BT', nQtdTotalPaletes * nPrecoStretch / (nPesoTotalProdutos/1000), 0 )
     local nPrecoForroTon        := iif( lForro, nQtdTotalPaletes * nPrecoForro / (nPesoTotalProdutos/1000), 0 )
 
-    local nFatorCorrecaoFrete   := 1 - (nTxJurosSobFrete + nTxLucroSobFreteReal + nAliqImpostosFederais + nAliqICMS)
-    local nFatorCorrecaoProd    := 1 - (nTxJurosSobProdutos + nDescontoFinanceiro)
+    local nFatorCorrecaoFrete   := 1 - (nTxJurosSobFrete + nTxLucroSobFreteReal + nAliqImpostosFederais + nAliqICMSFrete + nDescontoFinanceiro)
+    local nFatorCorrecaoProd    := 1 - (nTxJurosSobProdutos + nDescontoFinanceiro + nAliqICMSProdutos)
 
     local nFreteEfetivo         := (nFreteTotal + nPrecoPbrTon + nPrecoDescartTon + nPrecoStretchTon + nPrecoForroTon) / nFatorCorrecaoFrete
 
     local nPrecoCorrigido       := nPrecoTabela / nFatorCorrecaoProd + (nFreteEfetivo * nPesoUnitProduto / 1000)
 
 return Round(nPrecoCorrigido,2)
+
+user function xxteste()
+
+    getAliqICMS("CE")
+    getAliqICMS("SP")
+
+return
+
+static function getAliqICMS(cEstadoDestino)
+
+    local nAliquotaICMS     := 0
+    local nAliquotaFECP     := 0
+    local nAliquotaTotal    := 0
+    local nPos              := 0
+    local aEstados          := {"AC","AL","AM","AP","BA","CE","DF","ES","GO",;
+                                "MA","MG","MS","MT","PA","PB","PE","PI","PR",;
+                                "RJ","RN","RO","RR","RS","SC","SE","SP","TO" }
+    local nPosEstado        := aScan(aEstados, cEstadoDestino)
+    local cAliquotas        := allTrim(GetNewPar("MV_ESTICM",""))
+    local aAliquotas        := {}
+    local cUFOrigem         := ""
+
+    for nPos := 1 to len(aEstados)
+
+        if nPos == 1
+
+            cAliquotas := strTran(cAliquotas, aEstados[nPos], "")
+
+        else
+
+            cAliquotas := strTran(cAliquotas, aEstados[nPos], ";")
+
+        endif
+
+    next
+
+    aAliquotas := strTokArr2(cAliquotas, ";", .F.)
+
+    nAliquotaICMS := val(AllTrim(aAliquotas[nPosEstado]))
+
+    cUFOrigem       := FWSM0Util():GetSM0Data( ,, {"M0_ESTENT"} )[1][2]
+    nAliquotaFECP   := posicione("CFC",1,xFilial("CFC")+cUFOrigem+cEstadoDestino,"CFC_ALQFCP")
+
+    nAliquotaTotal  := nAliquotaICMS + nAliquotaFECP
+
+return nAliquotaTotal
