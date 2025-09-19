@@ -46,6 +46,7 @@ WsMethod Post PrPrd WsService precificacao
             jResponse["categorias"]         := oPreco:aCategorias
             jResponse["tipoPreco"]          := oPreco:cTipoPreco
             jResponse["chave"]              := oPreco:cChave
+            jResponse["dadosPreco"]         := aDadosPreco
             
         else
 

@@ -33,8 +33,10 @@ user function getPrcTb( jDadosProduto )
     local aDescartar        := {}
     local lExistRegsTudoOk  := .T.
 
-    private oPreco            := nil
-    private lFilialCotacao    := cFilialOrc $ "01010001;01010002;01010003;02010001;03010001"
+    private oPreco          := nil
+    private lFilialCotacao  := cFilialOrc $ "01010001;01010002;01010003;02010001;03010001"
+
+    public aDadosPreco      := {}
 
     cQuery += " SELECT *
     cQuery += " FROM
@@ -285,6 +287,8 @@ static function getPrecoCorrigido( jDadosProduto as json ) as numeric
     local cLojaCliente          := jDadosProduto:getJsonObject('lojaCliente')
     local cProduto              := jDadosProduto:getJsonObject('produto')
     local nPrecoTabela          := oPreco:nPreco
+    local cUnidadeCarreg        := "SS"
+    local nCustoProduto         := Posicione("SB1",1,xFilial("SB1")+cProduto,"B1_YCUST"+cUnidadeCarreg)
     local cTipoFrete            := jDadosProduto:getJsonObject('tipoFrete')
     local cTipoPreco            := oPreco:cTipoPreco
     local nFreteBase            := iif( cTipoFrete == "C", jDadosProduto:getJsonObject('valorFreteBase'), 0 )
@@ -315,7 +319,8 @@ static function getPrecoCorrigido( jDadosProduto as json ) as numeric
     local nAliqICMSFrete        := iif( lFilialCotacao, iif( lInscEstadual, iif( cEstado=='RN', 0, U_DefPort("ALIQUOICMS",6)/100 ) , getAliqICMS(cEstado)/100 ), 0 )
     local nAliqICMSProdutos     := iif( lFilialCotacao, iif( lInscEstadual, iif( cEstado=='RN', U_DefPort("ALIQUOICMS",6)/100*(-1), 0 ) , (getAliqICMS(cEstado)-U_DefPort("ALIQUOICMS",6))/100 ), 0 )
     local nTxJurosSobFrete      := nTxJurosBase / 30 * nPrazoPgtoFrete
-    local nTxJurosSobProdutos   := iif( cTipoPreco != "P" , nTxJurosBase / 30 * nPrazoPagtoProduto , 0 )
+    local nPrazoPagtoPadrao     := U_DefPort("PRZPGTOPAD", 45)
+    local nTxJurosSobProdutos   := iif( cTipoPreco != "P" , nTxJurosBase / 30 * (nPrazoPagtoProduto - nPrazoPagtoPadrao) , 0 )
     local nTxLucroSobFreteReal  := nTxLucroSobFreteBase / 30 * nPrazoPgtoFrete
 
     local nPrecoPbrTon          := iif( !lDevolucaoPalete .and. left(cTipoCarga,1) == 'P', nQtdTotalPaletes * nPrecoPaletePbr / (nPesoTotalProdutos/1000), 0 )
@@ -324,20 +329,25 @@ static function getPrecoCorrigido( jDadosProduto as json ) as numeric
     local nPrecoForroTon        := iif( lForro, nQtdTotalPaletes * nPrecoForro / (nPesoTotalProdutos/1000), 0 )
 
     local nFatorCorrecaoFrete   := 1 - (nTxJurosSobFrete + nTxLucroSobFreteReal + nAliqImpostosFederais + nAliqICMSFrete + nDescontoFinanceiro)
-    local nFatorCorrecaoProd    := 1 - (nTxJurosSobProdutos + nDescontoFinanceiro + nAliqICMSProdutos)
+    local nFatorCorrecaoProd    := nTxJurosSobProdutos + nDescontoFinanceiro + nAliqICMSProdutos
 
     local nFreteEfetivo         := (nFreteTotal + nPrecoPbrTon + nPrecoDescartTon + nPrecoStretchTon + nPrecoForroTon) / nFatorCorrecaoFrete
 
-    local nPrecoCorrigido       := nPrecoTabela / nFatorCorrecaoProd + (nFreteEfetivo * nPesoUnitProduto / 1000)
+    local nPrecoCorrigido       := nCustoProduto / (nCustoProduto / nPrecoTabela - nFatorCorrecaoProd) + (nFreteEfetivo * nPesoUnitProduto / 1000)
+
+    aAdd( aDadosPreco, nCustoProduto )
+    aAdd( aDadosPreco, nPrecoTabela )
+    aAdd( aDadosPreco, nFreteTotal )
+    aAdd( aDadosPreco, nPrecoPbrTon )
+    aAdd( aDadosPreco, nPrecoDescartTon )
+    aAdd( aDadosPreco, nPrecoStretchTon )
+    aAdd( aDadosPreco, nPrecoForroTon )
+    aAdd( aDadosPreco, nFatorCorrecaoFrete )
+    aAdd( aDadosPreco, nFreteEfetivo )
+    aAdd( aDadosPreco, nFatorCorrecaoProd )
 
 return Round(nPrecoCorrigido,2)
 
-user function xxteste()
-
-    getAliqICMS("CE")
-    getAliqICMS("SP")
-
-return
 
 static function getAliqICMS(cEstadoDestino)
 
