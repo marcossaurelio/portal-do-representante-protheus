@@ -58,7 +58,7 @@ WsMethod Post Login WsService login
             jResponse["auth"]                   := .T.
             jResponse["authToken"]              := encode64(cUser+cPassword)
             jResponse["authTokenExpiration"]    := dToS(date()+6)
-            jResponse["message"]                := "UsuÃ¡rio autenticado com sucesso!"
+            jResponse["message"]                := "Usuário autenticado com sucesso!"
             jResponse["sellerId"]               := SA3->A3_COD
             jResponse["userName"]               := SA3->A3_NREDUZ
 
@@ -67,7 +67,7 @@ WsMethod Post Login WsService login
             lRet := .F.
 
             jResponse["auth"] := lRet
-            jResponse["message"] := "UsuÃ¡rio ou senha invÃ¡lidos"
+            jResponse["message"] := "Usuário ou senha inválidos"
 
         endif
 
@@ -76,7 +76,7 @@ WsMethod Post Login WsService login
         lRet := .F.
 
         jResponse["auth"] := lRet
-        jResponse["message"] := "UsuÃ¡rio ou senha invÃ¡lidos"
+        jResponse["message"] := "Usuário ou senha inválidos"
 
     endif
 

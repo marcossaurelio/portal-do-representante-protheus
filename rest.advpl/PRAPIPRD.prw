@@ -6,6 +6,7 @@ WsRestful produtos Description "Produtos"
     WsData page         AS Character
     WsData pageSize     AS Character
     WsData filter       AS Character
+    WsData location     AS Character
 
     WsMethod Get Prods   Description "Retorna os produtos disponíveis"  Path "/"
     WsMethod Get Prod    Description "Retorna um produto específico"    Path "/{codigo}"
@@ -21,6 +22,7 @@ WsMethod Get Prods WsService produtos
     local cFiltro       := ""                       as character
     local cPagina       := ""                       as character
     local cTamPagina    := ""                       as character
+    local cUndCarreg    := ""                       as character
     local nContador     := 0                        as numeric
     local jItem                                     as json
     local lRet          := .T.
@@ -28,12 +30,14 @@ WsMethod Get Prods WsService produtos
     default self:page       := "1"
     default self:pageSize   := "10"
     default self:filter     := ""
+    default self:location   := "SS"
 
     cPagina     := self:page
     cTamPagina  := self:pageSize
     cFiltro     := self:filter
+    cUndCarreg  := self:location
     
-    cQuery := getQueryProdutos(cFiltro,cPagina,cTamPagina)
+    cQuery := getQueryProdutos(cFiltro,cPagina,cTamPagina,cUndCarreg)
 
     cAlias := getNextAlias()
 
@@ -121,7 +125,7 @@ WsMethod Get Prod WsService produtos
 return lRet
 
 
-static function getQueryProdutos(cFiltro,cPagina,cTamPagina)
+static function getQueryProdutos(cFiltro,cPagina,cTamPagina,cUndCarreg)
 
     local cQuery        := ""
 
@@ -130,7 +134,7 @@ static function getQueryProdutos(cFiltro,cPagina,cTamPagina)
     cQuery += " WHERE D_E_L_E_T_ = ' ' AND B1_MSBLQL != '1'
     cQuery += " AND B1_COD IN (SELECT DISTINCT DA1_CODPRO FROM " + retSQLName("DA1") + " DA1
     cQuery += " INNER JOIN " + retSQLName("DA0") + " DA0 ON DA0.D_E_L_E_T_ = ' ' AND DA0_FILIAL = DA1_FILIAL AND DA0_CODTAB = DA1_CODTAB
-    cQuery += " WHERE DA1.D_E_L_E_T_ = ' ' AND DA0_YPOREP = 'S' AND DA1_FILIAL = '" + xFilial("DA1") + "')
+    cQuery += " WHERE DA1.D_E_L_E_T_ = ' ' AND DA0_YPOREP = 'S' AND DA0_YUNCAR = '" + cUndCarreg + "')
 
     if !empty(cFiltro)
         cQuery += " AND (B1_COD LIKE '%" + upper(cFiltro) + "%' OR B1_DESC LIKE '%" + upper(cFiltro) + "%' OR B1_YMARCA LIKE '%" + upper(cFiltro) + "%')

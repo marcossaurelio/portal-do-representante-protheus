@@ -4,6 +4,7 @@
 user function getPrcTb( jDadosProduto )
 
     local cFilialOrc        := jDadosProduto:getJsonObject('filial')
+    local cUnidadeCarreg    := jDadosProduto:getJsonObject('unidadeCarregamento')
     local cProduto          := jDadosProduto:getJsonObject('produto')
     local cTipoFrete        := jDadosProduto:getJsonObject('tipoFrete')
     local nPrecoFOB         := jDadosProduto:getJsonObject('precoFOB')
@@ -34,7 +35,7 @@ user function getPrcTb( jDadosProduto )
     local lExistRegsTudoOk  := .T.
 
     private oPreco          := nil
-    private lFilialCotacao  := cFilialOrc $ "01010001;01010002;01010003;02010001;03010001"
+    private lFilialCotacao  := left(cFilialOrc,4) == "0101"
 
     public aDadosPreco      := {}
 
@@ -48,7 +49,7 @@ user function getPrcTb( jDadosProduto )
     cQuery += "     AND DA0_YPOREP = 'S' AND (TRIM(DA0_YCATEG) LIKE '%" + cCategCliente + "%' OR DA0_YCATEG = ' ')
     cQuery += "     AND DA0_YFRETE = '" + iif( lFilialCotacao, "F", cTipoFrete ) + "' AND DA0_YMAXDP >= " + cValToChar(nDiasPagto)
     cQuery += "     AND DA1.D_E_L_E_T_ = ' ' AND DA1_FILIAL = '" + left(cFilialOrc,4) + "' AND DA1_CODPRO = '" + allTrim(cProduto) + "'
-    cQuery += "     AND DA1_ATIVO = '1' AND DA1_DATVIG <= " + dToS(date())
+    cQuery += "     AND DA1_ATIVO = '1' AND DA1_DATVIG <= " + dToS(date()) + " AND DA0_YUNCAR = '" + cUnidadeCarreg + "'
     cQuery += " ORDER BY
     cQuery += "     DA1_YPRFX1,DA1_YPRFX2,DA1_YPRFX4,DA1_YPRFX5 ASC
 
@@ -287,8 +288,8 @@ static function getPrecoCorrigido( jDadosProduto as json ) as numeric
     local cLojaCliente          := jDadosProduto:getJsonObject('lojaCliente')
     local cProduto              := jDadosProduto:getJsonObject('produto')
     local nPrecoTabela          := oPreco:nPreco
-    local cUnidadeCarreg        := "SS"
-    local nCustoProduto         := Posicione("SB1",1,xFilial("SB1")+cProduto,"B1_YCUST"+cUnidadeCarreg)
+    local cUnidadeCarreg        := jDadosProduto:getJsonObject('unidadeCarregamento')
+    local nCustoProduto         := iif( lFilialCotacao, posicione("SB1",1,xFilial("SB1")+cProduto,"B1_YCUST"+cUnidadeCarreg), nPrecoTabela )
     local cTipoFrete            := jDadosProduto:getJsonObject('tipoFrete')
     local cTipoPreco            := oPreco:cTipoPreco
     local nFreteBase            := iif( cTipoFrete == "C", jDadosProduto:getJsonObject('valorFreteBase'), 0 )

@@ -7,7 +7,7 @@ WsRestful orcamentos Description "Orcamentos"
     WsData pageSize         AS Character
     WsData filtro           AS Character
     WsData sellerId         AS Character
-    WsData loadingLocation  AS Character
+    WsData branchId         AS Character
     WsData budget           AS Character
 
     WsMethod Post   Orcs    Description "Retorna os orcamentos de um vendedor"      Path "/"
@@ -39,7 +39,7 @@ WsMethod Post Orcs WsService orcamentos
     default self:pageSize           := "10"
     default self:filtro             := ""
     default self:sellerId           := ""
-    default self:loadingLocation    := ""
+    default self:branchId           := ""
     default self:budget             := ""
 
     cVendedor := self:sellerId
@@ -64,16 +64,17 @@ WsMethod Post Orcs WsService orcamentos
 
         jRegistro := JsonObject():New()
 
-        jRegistro['filial']         := (cAlias)->CJ_FILIAL
-        jRegistro['orcamento']      := (cAlias)->CJ_NUM
-        jRegistro['dataEmissao']    := (cAlias)->CJ_EMISSAO
-        jRegistro['cliente']        := (cAlias)->CJ_CLIENTE
-        jRegistro['nomeCliente']    := posicione("SA1",1,xFilial("SA1") + (cAlias)->CJ_CLIENTE + (cAlias)->CJ_LOJA,"A1_NOME")
-        jRegistro['situacao']       := iif( sToD((cAlias)->CJ_VALIDA) < date() .And. (cAlias)->CJ_YPRSITU $ "CP;PP", "EX", (cAlias)->CJ_YPRSITU )
-        jRegistro['pedido']         := (cAlias)->C5_NUM
-        jRegistro['situacaoPedido'] := iif( !empty((cAlias)->C5_NUM), iif( !empty((cAlias)->C5_NOTA) .And. !("X" $ (cAlias)->C5_NOTA), "F", "C" ), nil)
-        jRegistro['dataVencimento'] := (cAlias)->CJ_VALIDA
-        jRegistro['dataAlteracao']  := (cAlias)->CJ_YDTALTE
+        jRegistro['filial']                 := (cAlias)->CJ_FILIAL
+        jRegistro['unidadeCarregamento']    := (cAlias)->CJ_YUNCARG
+        jRegistro['orcamento']              := (cAlias)->CJ_NUM
+        jRegistro['dataEmissao']            := (cAlias)->CJ_EMISSAO
+        jRegistro['cliente']                := (cAlias)->CJ_CLIENTE
+        jRegistro['nomeCliente']            := posicione("SA1",1,xFilial("SA1") + (cAlias)->CJ_CLIENTE + (cAlias)->CJ_LOJA,"A1_NOME")
+        jRegistro['situacao']               := iif( sToD((cAlias)->CJ_VALIDA) < date() .And. (cAlias)->CJ_YPRSITU $ "CP;PP", "EX", (cAlias)->CJ_YPRSITU )
+        jRegistro['pedido']                 := (cAlias)->C5_NUM
+        jRegistro['situacaoPedido']         := iif( !empty((cAlias)->C5_NUM), iif( !empty((cAlias)->C5_NOTA) .And. !("X" $ (cAlias)->C5_NOTA), "F", "C" ), nil)
+        jRegistro['dataVencimento']         := (cAlias)->CJ_VALIDA
+        jRegistro['dataAlteracao']          := (cAlias)->CJ_YDTALTE
 
         aAdd(jResponse['objects'],jRegistro)
 
@@ -94,7 +95,7 @@ WsMethod Get OrcDt WsService orcamentos
     local aQuery            := {}                       as array
     local cAliasCabecalho   := ""                       as character
     local cAliasItens       := ""                       as character
-    local cFilialCar        := ""                       as character
+    local cFilialOrc        := ""                       as character
     local cOrcamento        := ""                       as character
     local cCliLoja          := ""                       as character
     local jItem                                         as json
@@ -104,13 +105,13 @@ WsMethod Get OrcDt WsService orcamentos
     default self:pageSize           := "10"
     default self:filtro             := ""
     default self:sellerId           := ""
-    default self:loadingLocation    := ""
+    default self:branchId           := ""
     default self:budget             := ""
 
-    cFilialCar := self:loadingLocation
+    cFilialOrc := self:branchId
     cOrcamento := self:budget
 
-    aQuery := qryDados(cFilialCar,cOrcamento)
+    aQuery := qryDados(cFilialOrc,cOrcamento)
 
     cAliasCabecalho := getNextAlias()
     cAliasItens     := getNextAlias()
@@ -122,34 +123,35 @@ WsMethod Get OrcDt WsService orcamentos
 
     cCliLoja := (cAliasCabecalho)->CJ_CLIENTE + (cAliasCabecalho)->CJ_LOJA
 
-    jResponse['filial']             := (cAliasCabecalho)->CJ_FILIAL
-    jResponse['orcamento']          := (cAliasCabecalho)->CJ_NUM
-    jResponse['situacao']           := iif( sToD((cAliasCabecalho)->CJ_VALIDA) < date() .And. (cAliasCabecalho)->CJ_YPRSITU $ "CP;PP", "EX", (cAliasCabecalho)->CJ_YPRSITU )
-    jResponse['cliente']            := (cAliasCabecalho)->CJ_CLIENTE
-    jResponse['loja']               := (cAliasCabecalho)->CJ_LOJA
-    jResponse['nomeCliente']        := posicione("SA1",1,xFilial("SA1") + cCliLoja,"A1_NOME")
-    jResponse['dataEmissao']        := (cAliasCabecalho)->CJ_EMISSAO
-    jResponse['condPag']            := (cAliasCabecalho)->CJ_CONDPAG
-    jResponse['observacao']         := (cAliasCabecalho)->CJ_YOBS
-    jResponse['tipoFrete']          := (cAliasCabecalho)->CJ_TPFRETE
-    jResponse['condPagFrete']       := (cAliasCabecalho)->CJ_YCPAGFR
-    jResponse['valorFrete']         := (cAliasCabecalho)->CJ_FRETE
-    jResponse['tipoCarga']          := (cAliasCabecalho)->CJ_YTPCARG
-    jResponse['valorDescarga']      := (cAliasCabecalho)->CJ_YVDESCA
-    jResponse['cargaMaxima']        := (cAliasCabecalho)->CJ_YCARMAX
-    jResponse['paletizacao10x1']    := (cAliasCabecalho)->CJ_YPP10X1
-    jResponse['paletizacao30x1']    := (cAliasCabecalho)->CJ_YPP30X1
-    jResponse['paletizacao25kg']    := (cAliasCabecalho)->CJ_YPP25KG
-    jResponse['tipoVeiculo']        := (cAliasCabecalho)->CJ_YTPVEIC
-    jResponse['responsavelFrete']   := (cAliasCabecalho)->CJ_YRESPFR == "T"
-    jResponse['estadoDestino']      := (cAliasCabecalho)->CJ_YUFDEST
-    jResponse['cidadeDestino']      := (cAliasCabecalho)->CJ_YMUNDES
-    jResponse['descontoFinanceiro'] := (cAliasCabecalho)->CJ_YDESCF
-    jResponse['tipoDescarga']       := (cAliasCabecalho)->CJ_YDESCAR
-    jResponse['veiculoProprio']     := iif( (cAliasCabecalho)->CJ_YVEIPRO == "S", .T., .F. )
-    jResponse['devolucaoPalete']    := (cAliasCabecalho)->CJ_YDEVPAL == "S"
-    jResponse['icmsPautaFrete']     := Posicione("SA1",1,xFilial("SA1")+cCliLoja,"A1_XVLRFRT") / 2 * (U_DefPort("ICMSPAUTFR",12)/100)
-    jResponse['itens']          := {}
+    jResponse['filial']                 := (cAliasCabecalho)->CJ_FILIAL
+    jResponse['orcamento']              := (cAliasCabecalho)->CJ_NUM
+    jResponse['unidadeCarregamento']    := AllTrim((cAliasCabecalho)->CJ_YUNCARG)
+    jResponse['situacao']               := iif( sToD((cAliasCabecalho)->CJ_VALIDA) < date() .And. (cAliasCabecalho)->CJ_YPRSITU $ "CP;PP", "EX", (cAliasCabecalho)->CJ_YPRSITU )
+    jResponse['cliente']                := (cAliasCabecalho)->CJ_CLIENTE
+    jResponse['loja']                   := (cAliasCabecalho)->CJ_LOJA
+    jResponse['nomeCliente']            := posicione("SA1",1,xFilial("SA1") + cCliLoja,"A1_NOME")
+    jResponse['dataEmissao']            := (cAliasCabecalho)->CJ_EMISSAO
+    jResponse['condPag']                := (cAliasCabecalho)->CJ_CONDPAG
+    jResponse['observacao']             := (cAliasCabecalho)->CJ_YOBS
+    jResponse['tipoFrete']              := (cAliasCabecalho)->CJ_TPFRETE
+    jResponse['condPagFrete']           := (cAliasCabecalho)->CJ_YCPAGFR
+    jResponse['valorFrete']             := (cAliasCabecalho)->CJ_FRETE
+    jResponse['tipoCarga']              := (cAliasCabecalho)->CJ_YTPCARG
+    jResponse['valorDescarga']          := (cAliasCabecalho)->CJ_YVDESCA
+    jResponse['cargaMaxima']            := (cAliasCabecalho)->CJ_YCARMAX
+    jResponse['paletizacao10x1']        := (cAliasCabecalho)->CJ_YPP10X1
+    jResponse['paletizacao30x1']        := (cAliasCabecalho)->CJ_YPP30X1
+    jResponse['paletizacao25kg']        := (cAliasCabecalho)->CJ_YPP25KG
+    jResponse['tipoVeiculo']            := (cAliasCabecalho)->CJ_YTPVEIC
+    jResponse['responsavelFrete']       := (cAliasCabecalho)->CJ_YRESPFR == "T"
+    jResponse['estadoDestino']          := (cAliasCabecalho)->CJ_YUFDEST
+    jResponse['cidadeDestino']          := (cAliasCabecalho)->CJ_YMUNDES
+    jResponse['descontoFinanceiro']     := (cAliasCabecalho)->CJ_YDESCF
+    jResponse['tipoDescarga']           := (cAliasCabecalho)->CJ_YDESCAR
+    jResponse['veiculoProprio']         := iif( (cAliasCabecalho)->CJ_YVEIPRO == "S", .T., .F. )
+    jResponse['devolucaoPalete']        := (cAliasCabecalho)->CJ_YDEVPAL == "S"
+    jResponse['icmsPautaFrete']         := Posicione("SA1",1,xFilial("SA1")+cCliLoja,"A1_XVLRFRT") / 2 * (U_DefPort("ICMSPAUTFR",12)/100)
+    jResponse['itens']                  := {}
 
     MPSysOpenQuery(aQuery[2],cAliasItens)
 
@@ -587,18 +589,18 @@ static function qryIndicadores(cVendedor,cFiltro)
 return cQuery
 
 
-static function qryDados(cFilialCar, cOrcamento)
+static function qryDados(cFilialOrc, cOrcamento)
 
     local cQueryCabecalho   := ""   as character
     local cQueryItens       := ""   as character
     
     cQueryCabecalho += " SELECT TOP 1 *
     cQueryCabecalho += " FROM " + retSQLName("SCJ")
-    cQueryCabecalho += " WHERE D_E_L_E_T_ = ' ' AND CJ_FILIAL = '"+cFilialCar+"' AND CJ_NUM = '"+cOrcamento+"'
+    cQueryCabecalho += " WHERE D_E_L_E_T_ = ' ' AND CJ_FILIAL = '"+cFilialOrc+"' AND CJ_NUM = '"+cOrcamento+"'
 
     cQueryItens     += " SELECT *
     cQueryItens     += " FROM " + retSQLName("SCK")
-    cQueryItens     += " WHERE D_E_L_E_T_ = ' ' AND CK_FILIAL = '"+cFilialCar+"' AND CK_NUM = '"+cOrcamento+"'
+    cQueryItens     += " WHERE D_E_L_E_T_ = ' ' AND CK_FILIAL = '"+cFilialOrc+"' AND CK_NUM = '"+cOrcamento+"'
 
 return {cQueryCabecalho,cQueryItens}
 
