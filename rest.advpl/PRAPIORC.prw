@@ -67,6 +67,8 @@ WsMethod Post Orcs WsService orcamentos
         jRegistro['filial']                 := (cAlias)->CJ_FILIAL
         jRegistro['unidadeCarregamento']    := (cAlias)->CJ_YUNCARG
         jRegistro['orcamento']              := (cAlias)->CJ_NUM
+        JRegistro['vendedor']               := (cAlias)->CJ_YVEND
+        jRegistro['nomeVendedor']           := posicione("SA3",1,xFilial("SA3") + (cAlias)->CJ_YVEND,"A3_NREDUZ")
         jRegistro['dataEmissao']            := (cAlias)->CJ_EMISSAO
         jRegistro['cliente']                := (cAlias)->CJ_CLIENTE
         jRegistro['nomeCliente']            := posicione("SA1",1,xFilial("SA1") + (cAlias)->CJ_CLIENTE + (cAlias)->CJ_LOJA,"A1_NOME")
@@ -126,6 +128,7 @@ WsMethod Get OrcDt WsService orcamentos
     jResponse['filial']                 := (cAliasCabecalho)->CJ_FILIAL
     jResponse['orcamento']              := (cAliasCabecalho)->CJ_NUM
     jResponse['unidadeCarregamento']    := AllTrim((cAliasCabecalho)->CJ_YUNCARG)
+    jResponse['vendedor']               := (cAliasCabecalho)->CJ_YVEND
     jResponse['situacao']               := iif( sToD((cAliasCabecalho)->CJ_VALIDA) < date() .And. (cAliasCabecalho)->CJ_YPRSITU $ "CP;PP", "EX", (cAliasCabecalho)->CJ_YPRSITU )
     jResponse['cliente']                := (cAliasCabecalho)->CJ_CLIENTE
     jResponse['loja']                   := (cAliasCabecalho)->CJ_LOJA
@@ -563,7 +566,10 @@ static function qryBrowse(cPagina, cVendedor, cFiltro)
     cQuery += " SELECT *
     cQuery += " FROM " + retSQLName("SCJ") + " SCJ
     cQuery += " LEFT JOIN " + retSQLName("SC5") + " SC5 ON C5_FILIAL = CJ_FILIAL AND C5_YNUMORC = CJ_NUM AND SC5.D_E_L_E_T_ = ' '
-    cQuery += " WHERE SCJ.D_E_L_E_T_ = ' ' AND CJ_YVEND = '"+cVendedor+"'
+    cQuery += " WHERE SCJ.D_E_L_E_T_ = ' '
+    if Posicione("SA3",1,xFilial("SA3")+cVendedor,"A3_TIPO") != "I"
+        cQuery += " AND CJ_YVEND = '"+cVendedor+"'
+    endif
     if !empty(cFiltro)
         cQuery += " AND " + cFiltro
     endif
@@ -581,7 +587,10 @@ static function qryIndicadores(cVendedor,cFiltro)
     cQuery += " SELECT COUNT(*) AS TOTAL
     cQuery += " FROM " + retSQLName("SCJ") + " SCJ
     cQuery += " LEFT JOIN " + retSQLName("SC5") + " SC5 ON C5_FILIAL = CJ_FILIAL AND C5_YNUMORC = CJ_NUM AND SC5.D_E_L_E_T_ = ' '
-    cQuery += " WHERE SCJ.D_E_L_E_T_ = ' ' AND CJ_YVEND = '"+cVendedor+"'
+    cQuery += " WHERE SCJ.D_E_L_E_T_ = ' '
+    if Posicione("SA3",1,xFilial("SA3")+cVendedor,"A3_TIPO") != "I"
+        cQuery += " AND CJ_YVEND = '"+cVendedor+"'
+    endif
     if !empty(cFiltro)
         cQuery += " AND " + cFiltro
     endif

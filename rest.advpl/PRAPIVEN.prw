@@ -1,19 +1,19 @@
 #include 'Protheus.ch'
 #include 'Restful.ch'
 
-WsRestful condicoes Description "Condicoes de pagamento"
+WsRestful vendedores Description "Vendedores"
 
     WsData page     AS Character
     WsData pageSize AS Character
     WsData filter   AS Character
 
-    WsMethod Get Conds   Description "Retorna as condições de pagamento" Path "/"
-    WsMethod Get Cond    Description "Retorna uma condição de pagamento específica" Path "/{codigo}"
+    WsMethod Get Vends   Description "Retorna a lista de vendedores" Path "/"
+    WsMethod Get Vend    Description "Retorna um vendedor específico" Path "/{codigo}"
 
 End WsRestful
 
 
-WsMethod Get Conds WsService condicoes
+WsMethod Get Vends WsService vendedores
 
     local jResponse     := JsonObject():New()       as json
     local cQuery        := ""                       as character
@@ -33,7 +33,7 @@ WsMethod Get Conds WsService condicoes
     cTamPagina  := self:pageSize
     cFiltro     := self:filter
     
-    cQuery := getQueryCondicoes(cFiltro,cPagina,cTamPagina)
+    cQuery := getQueryVendedores(cFiltro,cPagina,cTamPagina)
 
     cAlias := getNextAlias()
 
@@ -50,8 +50,10 @@ WsMethod Get Conds WsService condicoes
 
         jItem := JsonObject():New()
 
-        jItem['codigo']         := (cAlias)->E4_CODIGO
-        jItem['descricao']      := allTrim((cAlias)->E4_DESCRI)
+        jItem['codigo']         := (cAlias)->A3_COD
+        jItem['cgc']            := allTrim((cAlias)->A3_CGC)
+        jItem['nome']           := allTrim((cAlias)->A3_NREDUZ)
+        jItem['tipo']           := allTrim((cAlias)->A3_TIPO)
 
         aAdd(jResponse['items'],jItem)
 
@@ -71,66 +73,70 @@ WsMethod Get Conds WsService condicoes
 Return lRet
 
 
-WsMethod Get Cond WsService condicoes
+WsMethod Get Vend WsService vendedores
 
     local jResponse         := JsonObject():New()       as json
-    local aAreaSE4          := {}                       as array
-    local cCodCond          := ""                       as character
+    local aAreaSA3          := {}                       as array
+    local cCodVend          := ""                       as character
     local cFiltro           := ""                       as character
     local lRet              := .T.
     
-    aAreaSE4 := SE4->(getArea())
+    aAreaSA3 := SA3->(getArea())
 
-    cCodCond  := self:aUrlParms[1]
+    cCodVend  := self:aUrlParms[1]
 
-    aAreaSE4 := SE4->(GetArea())
-    cFiltro := "SE4->E4_YPRUSAD == 'S' .and. SE4->E4_MSBLQL != '1'"
+    aAreaSA3 := SA3->(GetArea())
+    cFiltro := "SA3->A3_MSBLQL != '1'"
     
-    dbSelectArea("SE4")
-    SE4->(dbSetFilter( {|| &(cFiltro)}, cFiltro ))
-    SE4->(dbSetOrder(1))
-    SE4->(dbGoTop())
+    dbSelectArea("SA3")
+    SA3->(dbSetFilter( {|| &(cFiltro)}, cFiltro ))
+    SA3->(dbSetOrder(1))
+    SA3->(dbGoTop())
 
-    if SE4->(dbSeek(xFilial("SE4")+padL(cCodCond, TamSX3("E4_CODIGO")[1], " "), .T.))
+    if SA3->(dbSeek(xFilial("SA3")+padL(cCodVend, TamSX3("A3_COD")[1], " "), .T.))
 
         jResponse['success']        := lRet
-        jResponse['message']        := "Condição de pagamento encontrada com sucesso"
-        jResponse['codigo']         := SE4->E4_CODIGO
-        jResponse['descricao']      := allTrim(SE4->E4_DESCRI)
+        jResponse['message']        := "Vendedor encontrado com sucesso"
+        jResponse['codigo']         := SA3->A3_COD
+        jResponse['nome']           := allTrim(SA3->A3_NREDUZ)
+        jResponse['cgc']            := allTrim(SA3->A3_CGC)
+        jResponse['tipo']           := allTrim(SA3->A3_TIPO)
 
     else
 
         lRet = .F.
 
         jResponse['success']        := lRet
-        jResponse["message"]        := "Condição de pagamento não encontrada na base de dados"
+        jResponse["message"]        := "Vendedor não encontrado na base de dados"
         jResponse['codigo']         := ""
-        jResponse['descricao']      := ""
+        jResponse['nome']           := ""
+        jResponse['cgc']            := ""
+        jResponse['tipo']           := ""
         
     endif
 
     self:setContentType('application/json')
     self:setResponse(jResponse:toJson())
 
-    SE4->(dbClearFilter())
-    restArea(aAreaSE4)
+    SA3->(dbClearFilter())
+    restArea(aAreaSA3)
 
 return lRet
 
 
-static function getQueryCondicoes(cFiltro,cPagina,cTamPagina)
+static function getQueryVendedores(cFiltro,cPagina,cTamPagina)
 
     local cQuery        := ""
 
     cQuery += " SELECT *
-    cQuery += " FROM " + retSQLName("SE4")
-    cQuery += " WHERE D_E_L_E_T_ = ' ' AND E4_MSBLQL != '1' AND E4_YPRUSAD = 'S'
+    cQuery += " FROM " + retSQLName("SA3")
+    cQuery += " WHERE D_E_L_E_T_ = ' ' AND A3_MSBLQL != '1'
 
     if !empty(cFiltro)
-        cQuery += " AND (E4_DESCRI LIKE '%" + upper(cFiltro) + "%')
+        cQuery += " AND (A3_NREDUZ LIKE '%" + upper(cFiltro) + "%' OR A3_COD LIKE '%" + upper(cFiltro) + "%' OR A3_CGC LIKE '%" + upper(cFiltro) + "%' OR A3_NOME LIKE '%" + upper(cFiltro) + "%')"
     endif
 
-    cQuery += " ORDER BY E4_COND
+    cQuery += " ORDER BY A3_COD
 
     if !empty(cPagina) .and. !empty(cTamPagina)
         cQuery += " OFFSET ("+cPagina+" - 1) * "+cTamPagina+" ROWS

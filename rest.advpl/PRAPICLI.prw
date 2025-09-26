@@ -105,7 +105,7 @@ WsMethod Get Clnt WsService clientes
     if len(cCodigoCliente) <= 8 // Se o codigo enviado na requisicao tiver tamanho até 8, pesquisa por A1_COD
 
         SA1->(dbSetOrder(1))
-        nTamCampo := tamSX3("A1_COD")[1] // Tamanho do campo A1_COD
+        nTamCampo := tamSX3("A1_COD")[1] + tamSX3("A1_LOJA")[1] // Tamanho do campo A1_COD
 
     else // Se o codigo enviado na requisicao tiver tamanho maior que 8, pesquisa por A1_CGC
 
@@ -116,7 +116,7 @@ WsMethod Get Clnt WsService clientes
 
     SA1->(dbGoTop())
 
-    if SA1->(dbSeek(xFilial("SA1")+padR(cCodigoCliente, nTamCampo, " ")))
+    if SA1->(dbSeek(xFilial("SA1")+padL(cCodigoCliente, nTamCampo, " ")))
 
         if validaCliente(SA1->A1_COD,SA1->A1_LOJA,cCodVendedor) .or. SA1->A1_VEND == cCodVendedor
 
@@ -323,18 +323,26 @@ static function getQueryClientes(cFiltro,cPagina,cTamPagina,cCodVendedor)
 
     cQuery += " SELECT DISTINCT A1_COD, A1_LOJA, A1_CGC, A1_NOME, A1_NREDUZ, A1_EST, A1_INSCR, A1_YCATEGO, A1_PESSOA
     cQuery += " FROM " + retSQLName("SA1") + " SA1
-    cQuery += " INNER JOIN " + retSQLName("SCJ") + " SCJ ON CJ_CLIENTE = A1_COD AND CJ_LOJA = A1_LOJA AND SCJ.D_E_L_E_T_ = ' '
-    cQuery += " WHERE SA1.D_E_L_E_T_ = ' ' AND A1_MSBLQL != '1'  AND CJ_EMISSAO >= '" + dToS(Date()-90) + "' AND CJ_YVEND = '" + cCodVendedor + "'
 
-    if !empty(cFiltro)
-        cQuery += " AND (A1_CGC LIKE '%" + upper(cFiltro) + "%' OR A1_COD LIKE '%" + upper(cFiltro) + "%' OR A1_NOME LIKE '%" + upper(cFiltro) + "%')
+    if Posicione("SA3",1,xFilial("SA3")+cCodVendedor,"A3_TIPO") != 'I'
+        cQuery += " INNER JOIN " + retSQLName("SCJ") + " SCJ ON CJ_CLIENTE = A1_COD AND CJ_LOJA = A1_LOJA AND SCJ.D_E_L_E_T_ = ' '
     endif
 
-    cQuery += " ORDER BY A1_NOME DESC
+    cQuery += " WHERE SA1.D_E_L_E_T_ = ' ' AND A1_MSBLQL != '1'
+
+    if Posicione("SA3",1,xFilial("SA3")+cCodVendedor,"A3_TIPO") != 'I'
+        cQuery += " AND CJ_EMISSAO >= '" + dToS(Date()-90) + "' AND CJ_YVEND = '" + cCodVendedor + "'
+    endif
+
+    if !empty(cFiltro)
+        cQuery += " AND (A1_CGC LIKE '%" + upper(cFiltro) + "%' OR A1_COD+A1_LOJA LIKE '%" + upper(cFiltro) + "%' OR A1_NOME LIKE '%" + upper(cFiltro) + "%')
+    endif
+
+    cQuery += " ORDER BY A1_COD, A1_LOJA
 
     if !empty(cPagina) .and. !empty(cTamPagina)
         cQuery += " OFFSET ("+cPagina+" - 1) * "+cTamPagina+" ROWS
-        cQuery += " FETCH NEXT "+str(val(cTamPagina)+1)+" ROWS ONLY
+        cQuery += " FETCH NEXT "+cValToChar(val(cTamPagina)+1)+" ROWS ONLY
     endif
 
 
@@ -347,6 +355,11 @@ static function validaCliente(cCodCliente,cLojaCliente,cCodVendedor)
     local lRetorno          := .T.
     local cFiltroSCJ        := "SCJ->CJ_CLIENTE == '" + cCodCliente + "' .and. SCJ->CJ_LOJA == '" + cLojaCliente + "' .and. dToS(SCJ->CJ_EMISSAO) >= '" + dToS(Date()-90) + "'
     local cVendedorAtual    := ""
+
+    if Posicione("SA3",1,xFilial("SA3")+cCodVendedor,"A3_TIPO") == 'I' // Se o vendedor for interno, libera o cliente
+        lRetorno := .T.
+        return lRetorno
+    endif
     
     dbSelectArea("SCJ")
     SCJ->(dbSetOrder(3)) // CJ_FILIAL + CJ_CLIENTE + CJ_LOJA + DTOS(CJ_EMISSAO)
@@ -399,7 +412,7 @@ return strTran(strTran(cCEP, ".", ""), "-","")
 
 static function formatTelefone(cTelefone)
 
-    local cTelFormatado     := StrTokArr2(cTelefone,"/")[1]
+    local cTelFormatado     := StrTokArr2(cTelefone,"/",.T.)[1]
     local cDDD              := ""
     local cNumero           := ""
 
@@ -408,12 +421,16 @@ static function formatTelefone(cTelefone)
     cTelFormatado   := strTran(cTelFormatado, "-", "")
     cTelFormatado   := strTran(cTelFormatado, " ", "")
 
-    cDDD            := left(cTelFormatado, 2)
-    cNumero         := right(cTelFormatado, len(cTelFormatado) - 2)
+    if !Empty(allTrim(cTelFormatado))
 
-    if len(cNumero) == 8 .And. left(cNumero, 1) >= "6"
+        cDDD            := left(cTelFormatado, 2)
+        cNumero         := right(cTelFormatado, len(cTelFormatado) - 2)
 
-        cNumero := "9" + cNumero
+        if len(cNumero) == 8 .And. left(cNumero, 1) >= "6"
+
+            cNumero := "9" + cNumero
+
+        endif
 
     endif
 

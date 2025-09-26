@@ -95,7 +95,7 @@ WsMethod Get Prod WsService produtos
     SB1->(dbSetOrder(1))
     SB1->(dbGoTop())
 
-    if SB1->(dbSeek(xFilial("SB1")+cCodigoProduto))
+    if SB1->(dbSeek(xFilial("SB1")+padL(cCodigoProduto, TamSX3("B1_COD")[1], " ")))
 
         jResponse['success']            := .T.
         jResponse['codigo']             := allTrim(SB1->B1_COD)

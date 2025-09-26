@@ -57,10 +57,11 @@ WsMethod Post Login WsService login
 
             jResponse["auth"]                   := .T.
             jResponse["authToken"]              := encode64(cUser+cPassword)
-            jResponse["authTokenExpiration"]    := dToS(date()+6)
+            jResponse["authTokenExpiration"]    := dToS(date())
             jResponse["message"]                := "Usuário autenticado com sucesso!"
             jResponse["sellerId"]               := SA3->A3_COD
             jResponse["userName"]               := SA3->A3_NREDUZ
+            jResponse["sellerType"]             := SA3->A3_TIPO
 
         else
 
