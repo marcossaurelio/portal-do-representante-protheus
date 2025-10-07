@@ -8,8 +8,8 @@ WsRestful produtos Description "Produtos"
     WsData filter       AS Character
     WsData location     AS Character
 
-    WsMethod Get Prods   Description "Retorna os produtos disponíveis"  Path "/"
-    WsMethod Get Prod    Description "Retorna um produto específico"    Path "/{codigo}"
+    WsMethod Get Prods  Description "Retorna os produtos disponíveis"               Path "/"
+    WsMethod Get Prod   Description "Retorna um produto específico"                 Path "/{codigo}"
 
 End WsRestful
 
@@ -30,7 +30,7 @@ WsMethod Get Prods WsService produtos
     default self:page       := "1"
     default self:pageSize   := "10"
     default self:filter     := ""
-    default self:location   := "SS"
+    default self:location   := ""
 
     cPagina     := self:page
     cTamPagina  := self:pageSize
@@ -134,7 +134,13 @@ static function getQueryProdutos(cFiltro,cPagina,cTamPagina,cUndCarreg)
     cQuery += " WHERE D_E_L_E_T_ = ' ' AND B1_MSBLQL != '1'
     cQuery += " AND B1_COD IN (SELECT DISTINCT DA1_CODPRO FROM " + retSQLName("DA1") + " DA1
     cQuery += " INNER JOIN " + retSQLName("DA0") + " DA0 ON DA0.D_E_L_E_T_ = ' ' AND DA0_FILIAL = DA1_FILIAL AND DA0_CODTAB = DA1_CODTAB
-    cQuery += " WHERE DA1.D_E_L_E_T_ = ' ' AND DA0_YPOREP = 'S' AND DA0_YUNCAR = '" + cUndCarreg + "')
+    cQuery += " WHERE DA1.D_E_L_E_T_ = ' ' AND DA0_YPOREP = 'S'
+    
+    if !Empty(cUndCarreg)
+        cQuery += " AND DA0_YUNCAR = '" + cUndCarreg + "'
+    endif
+
+    cQuery += " )
 
     if !empty(cFiltro)
         cQuery += " AND (B1_COD LIKE '%" + upper(cFiltro) + "%' OR B1_DESC LIKE '%" + upper(cFiltro) + "%' OR B1_YMARCA LIKE '%" + upper(cFiltro) + "%')
@@ -144,7 +150,7 @@ static function getQueryProdutos(cFiltro,cPagina,cTamPagina,cUndCarreg)
 
     if !empty(cPagina) .and. !empty(cTamPagina)
         cQuery += " OFFSET ("+cPagina+" - 1) * "+cTamPagina+" ROWS
-        cQuery += " FETCH NEXT "+str(val(cTamPagina)+1)+" ROWS ONLY
+        cQuery += " FETCH NEXT "+cValToChar(val(cTamPagina)+1)+" ROWS ONLY
     endif
 
 return cQuery
