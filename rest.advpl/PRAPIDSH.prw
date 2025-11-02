@@ -5,6 +5,11 @@ WsRestful dashboard Description "Dashboard"
 
     WsData value    AS Character
 
+    WsMethod Post   FatAc   Description "Retorna o faturamento acumulado"       Path "/faturamento-acumulado"
+    WsMethod Post   ClNov   Description "Retorna o número de clientes novos"    Path "/clientes-novos"
+    WsMethod Post   ClNCo   Description "Retorna clientes que não compraram"    Path "/clientes-nao-compraram"
+    WsMethod Post   AumCl   Description "Retorna aos clientes com aumento"      Path "/clientes-aumento"
+    WsMethod Post   RedCl   Description "Retorna aos clientes com redução"      Path "/clientes-reducao"
     WsMethod Post   FaPer   Description "Retorna o faturamento por período"     Path "/faturamento-x-periodo"
     WsMethod Post   HisFa   Description "Retorna o histórico de faturamento"    Path "/historico-faturamento"
     WsMethod Post   CatCl   Description "Categorias de Clientes"                Path "/categorias-clientes"
@@ -12,6 +17,187 @@ WsRestful dashboard Description "Dashboard"
     WsMethod Get    Anos    Description "Anos para filtro"                      Path "/filtros/anos"
 
 End WsRestful
+
+WsMethod Post FatAc WsService dashboard
+
+    Local jResponse         := JsonObject():New()
+    Local jBody             := JsonObject():New()
+    Local cBody             := Self:GetContent()
+    Local cQuery            := ""
+    Local cAlias            := GetNextAlias()
+    Local aAnos             := {}
+    Local aValores          := {}
+    Local lRet              := .T.
+    
+    jBody:fromJson(cBody)
+
+    cQuery := QryFatAcum(jBody)
+
+    MPSysOpenQuery(cQuery,cAlias)
+
+    (cAlias)->(DbGoTop())
+
+    While !(cAlias)->(Eof())
+    
+        AAdd(aAnos,     AllTrim((cAlias)->ANO))
+        AAdd(aValores,  Round((cAlias)->VALOR,2))
+
+        (cAlias)->(DbSkip())
+
+    EndDo
+
+    jResponse["anos"]       := aAnos
+    jResponse["valores"]    := aValores
+
+    Self:SetResponse(jResponse:toJson())
+
+    (cAlias)->(DbCloseArea())
+
+Return lRet
+
+
+WsMethod Post ClNov WsService dashboard
+
+    Local jResponse         := JsonObject():New()
+    Local jBody             := JsonObject():New()
+    Local cBody             := Self:GetContent()
+    Local cQuery            := ""
+    Local cAlias            := GetNextAlias()
+    Local nQtdNovCli        := 0
+    Local nVariacao         := 0
+    Local lRet              := .T.
+    
+    jBody:fromJson(cBody)
+
+    cQuery := QryCliNov(jBody)
+
+    MPSysOpenQuery(cQuery,cAlias)
+
+    (cAlias)->(DbGoTop())
+
+    If !(cAlias)->(Eof())
+    
+        nQtdNovCli := (cAlias)->NOVOS_CLIENTES
+        nVariacao  := (cAlias)->VARIACAO
+
+    EndIf
+
+    jResponse["novosClientes"]  := nQtdNovCli
+    jResponse["variacao"]       := nVariacao
+
+    Self:SetResponse(jResponse:toJson())
+
+    (cAlias)->(DbCloseArea())
+
+Return lRet
+
+
+WsMethod Post ClNCo WsService dashboard
+
+    Local jResponse         := JsonObject():New()
+    Local jBody             := JsonObject():New()
+    Local cBody             := Self:GetContent()
+    Local cQuery            := ""
+    Local cAlias            := GetNextAlias()
+    Local nQtdCliNCo        := 0
+    Local nVariacao         := 0
+    Local lRet              := .T.
+    
+    jBody:fromJson(cBody)
+
+    cQuery := QryCliNCom(jBody)
+
+    MPSysOpenQuery(cQuery,cAlias)
+
+    (cAlias)->(DbGoTop())
+
+    If !(cAlias)->(Eof())
+    
+        nQtdCliNCo := (cAlias)->NAO_COMPRARAM
+        nVariacao  := (cAlias)->VARIACAO
+
+    EndIf
+
+    jResponse["naoCompraram"]   := nQtdCliNCo
+    jResponse["variacao"]       := nVariacao
+
+    Self:SetResponse(jResponse:toJson())
+
+    (cAlias)->(DbCloseArea())
+
+Return lRet
+
+
+WsMethod Post AumCl WsService dashboard
+
+    Local jResponse         := JsonObject():New()
+    Local jBody             := JsonObject():New()
+    Local cBody             := Self:GetContent()
+    Local cQuery            := ""
+    Local cAlias            := GetNextAlias()
+    Local nQtdCliAum        := 0
+    Local nVariacao         := 0
+    Local lRet              := .T.
+    
+    jBody:fromJson(cBody)
+
+    cQuery := QryAuRdCli(jBody, .T.)
+
+    MPSysOpenQuery(cQuery,cAlias)
+
+    (cAlias)->(DbGoTop())
+
+    If !(cAlias)->(Eof())
+    
+        nQtdCliAum := (cAlias)->QTD_CLIENTES
+        nVariacao  := (cAlias)->VARIACAO
+
+    EndIf
+
+    jResponse["clientesAumento"]    := nQtdCliAum
+    jResponse["variacao"]           := nVariacao
+
+    Self:SetResponse(jResponse:toJson())
+
+    (cAlias)->(DbCloseArea())
+
+Return lRet
+
+
+WsMethod Post RedCl WsService dashboard
+
+    Local jResponse         := JsonObject():New()
+    Local jBody             := JsonObject():New()
+    Local cBody             := Self:GetContent()
+    Local cQuery            := ""
+    Local cAlias            := GetNextAlias()
+    Local nQtdCliRed        := 0
+    Local nVariacao         := 0
+    Local lRet              := .T.
+    
+    jBody:fromJson(cBody)
+
+    cQuery := QryAuRdCli(jBody, .F.)
+
+    MPSysOpenQuery(cQuery,cAlias)
+
+    (cAlias)->(DbGoTop())
+
+    If !(cAlias)->(Eof())
+    
+        nQtdCliRed := (cAlias)->QTD_CLIENTES
+        nVariacao  := (cAlias)->VARIACAO
+
+    EndIf
+
+    jResponse["clientesReducao"]    := nQtdCliRed
+    jResponse["variacao"]           := nVariacao
+
+    Self:SetResponse(jResponse:toJson())
+
+    (cAlias)->(DbCloseArea())
+
+Return lRet
 
 
 WsMethod Post FaPer WsService dashboard
@@ -274,6 +460,282 @@ WsMethod Get Anos WsService dashboard
 Return lRet
 
 
+Static Function QryFatAcum(jBody)
+
+    Local cQuery        := ""
+    Local jBodyInfo     := FormatBody(jBody)
+    Local aAnos         := { GetMax(jBody:GetJsonObject("anos")), AllTrim(cValToChar(Val(GetMax(jBody:GetJsonObject("anos")))-1)) }
+    Local cMeses        := jBodyInfo:GetJsonObject("meses")
+    Local cFiliais      := jBodyInfo:GetJsonObject("filiais")
+    Local cVendedores   := jBodyInfo:GetJsonObject("vendedores")
+    Local cProdutos     := jBodyInfo:GetJsonObject("produtos")
+
+    cQuery += " SELECT TOP 2 LEFT(D2_EMISSAO,4) AS ANO, SUM(D2_TOTAL-D2_VALDEV) AS VALOR
+    cQuery += " FROM " + RetSQLName("SD2") + " SD2
+    cQuery += " INNER JOIN " + RetSQLName("SC5") + " SC5 ON C5_FILIAL = D2_FILIAL AND C5_NUM = D2_PEDIDO AND SC5.D_E_L_E_T_ = ' '
+    cQuery += " WHERE SD2.D_E_L_E_T_ = ' ' AND LEFT(D2_EMISSAO,4) IN " + FormatIn(ArrTokStr(aAnos,","),",") + " AND SUBSTRING(D2_EMISSAO,5,2) IN " + cMeses
+    cQuery += " AND D2_FILIAL IN " + cFiliais
+
+    If !Empty(cVendedores)
+
+        cQuery += " AND C5_VEND1 IN " + cVendedores
+    
+    EndIf
+
+    If !Empty(cProdutos)
+
+        cQuery += " AND D2_COD IN " + cProdutos
+
+    EndIf
+
+    cQuery += " GROUP BY LEFT(D2_EMISSAO,4)
+    cQuery += " ORDER BY ANO DESC
+
+Return cQuery
+
+
+Static Function QryCliNov(jBody)
+
+    Local cQuery        := ""
+    Local jBodyInfo     := FormatBody(jBody)
+    Local aAnos         := { GetMax(jBody:GetJsonObject("anos")), AllTrim(cValToChar(Val(GetMax(jBody:GetJsonObject("anos")))-1)) }
+    Local cMeses        := jBodyInfo:GetJsonObject("meses")
+    Local cFiliais      := jBodyInfo:GetJsonObject("filiais")
+    Local cVendedores   := jBodyInfo:GetJsonObject("vendedores")
+    Local cProdutos     := jBodyInfo:GetJsonObject("produtos")
+
+    cQuery += " WITH NovosClientesPorAno AS (
+    cQuery += "     SELECT 
+    cQuery += "         LEFT(D2_EMISSAO,4) AS ANO,
+    cQuery += "         COUNT(DISTINCT D2_CLIENTE) AS NOVOS_CLIENTES
+    cQuery += "     FROM " + RetSQLName("SD2") + " SD2
+    cQuery += "     INNER JOIN " + RetSQLName("SC5") + " SC5 
+    cQuery += "         ON C5_FILIAL = D2_FILIAL 
+    cQuery += "         AND C5_NUM = D2_PEDIDO 
+    cQuery += "         AND SC5.D_E_L_E_T_ = ' '
+    cQuery += "     WHERE 
+    cQuery += "         SD2.D_E_L_E_T_ = ' ' 
+    cQuery += "         AND LEFT(D2_EMISSAO,4) IN " + FormatIn(ArrTokStr(aAnos,","),",")
+    cQuery += "         AND SUBSTRING(D2_EMISSAO,5,2) IN " + cMeses
+    cQuery += "         AND D2_FILIAL IN " + cFiliais + " AND D2_QTDEDEV != D2_QUANT
+
+    If !Empty(cVendedores)
+
+        cQuery += " AND C5_VEND1 IN " + cVendedores
+
+    EndIf
+
+    If !Empty(cProdutos)
+
+        cQuery += " AND D2_COD IN " + cProdutos
+
+    EndIf
+
+    cQuery += "         AND D2_CLIENTE NOT IN (
+    cQuery += "             SELECT DISTINCT D2_CLIENTE
+    cQuery += "             FROM " + RetSQLName("SD2") + " SD2SQ
+    cQuery += "             INNER JOIN " + RetSQLName("SC5") + " SC5SQ 
+    cQuery += "                 ON C5_FILIAL = D2_FILIAL 
+    cQuery += "                 AND C5_NUM = D2_PEDIDO 
+    cQuery += "                 AND SC5SQ.D_E_L_E_T_ = ' '
+    cQuery += "             WHERE 
+    cQuery += "                 SD2SQ.D_E_L_E_T_ = ' ' 
+    cQuery += "                 AND LEFT(D2_EMISSAO,4) = CAST(CAST(LEFT(SD2.D2_EMISSAO, 4) AS INT) - 1 AS VARCHAR)
+    cQuery += "                 AND SUBSTRING(D2_EMISSAO,5,2) IN " + cMeses
+    cQuery += "                 AND D2_FILIAL IN " + cFiliais + " AND D2_QTDEDEV != D2_QUANT
+    
+    If !Empty(cVendedores)
+
+        cQuery += " AND C5_VEND1 IN " + cVendedores
+    
+    EndIf
+
+    If !Empty(cProdutos)
+
+        cQuery += " AND D2_COD IN " + cProdutos
+    
+    EndIf
+
+    cQuery += "         )
+    cQuery += "     GROUP BY LEFT(D2_EMISSAO,4)
+    cQuery += " )
+    cQuery += " SELECT 
+    cQuery += "     ANO,
+    cQuery += "     NOVOS_CLIENTES,
+    cQuery += "     CASE 
+    cQuery += "         WHEN LAG(NOVOS_CLIENTES) OVER (ORDER BY ANO) = 0 THEN NULL
+    cQuery += "         ELSE 
+    cQuery += "             ROUND(
+    cQuery += "                 ((CAST(NOVOS_CLIENTES AS FLOAT) - LAG(NOVOS_CLIENTES) OVER (ORDER BY ANO)) 
+    cQuery += "                  / LAG(NOVOS_CLIENTES) OVER (ORDER BY ANO)) * 100, 
+    cQuery += "                 2
+    cQuery += "             )
+    cQuery += "     END AS VARIACAO
+    cQuery += " FROM NovosClientesPorAno
+    cQuery += " ORDER BY ANO DESC
+
+Return cQuery
+
+
+Static Function QryCliNCom(jBody)
+
+    Local cQuery        := ""
+    Local jBodyInfo     := FormatBody(jBody)
+    Local aAnos         := { AllTrim(cValToChar(Val(GetMax(jBody:GetJsonObject("anos")))-1)), AllTrim(cValToChar(Val(GetMax(jBody:GetJsonObject("anos")))-2)) }
+    Local cMeses        := jBodyInfo:GetJsonObject("meses")
+    Local cFiliais      := jBodyInfo:GetJsonObject("filiais")
+    Local cVendedores   := jBodyInfo:GetJsonObject("vendedores")
+    Local cProdutos     := jBodyInfo:GetJsonObject("produtos")
+
+    cQuery += " WITH ClientesNaoCompraram AS (
+    cQuery += "     SELECT 
+    cQuery += "         LEFT(D2_EMISSAO,4) AS ANO,
+    cQuery += "         COUNT(DISTINCT D2_CLIENTE) AS NAO_COMPRARAM
+    cQuery += "     FROM " + RetSQLName("SD2") + " SD2
+    cQuery += "     INNER JOIN " + RetSQLName("SC5") + " SC5 
+    cQuery += "         ON C5_FILIAL = D2_FILIAL 
+    cQuery += "         AND C5_NUM = D2_PEDIDO 
+    cQuery += "         AND SC5.D_E_L_E_T_ = ' '
+    cQuery += "     WHERE 
+    cQuery += "         SD2.D_E_L_E_T_ = ' ' 
+    cQuery += "         AND LEFT(D2_EMISSAO,4) IN " + FormatIn(ArrTokStr(aAnos,","),",")
+    cQuery += "         AND SUBSTRING(D2_EMISSAO,5,2) IN " + cMeses
+    cQuery += "         AND D2_FILIAL IN " + cFiliais + " AND D2_QTDEDEV != D2_QUANT
+
+    If !Empty(cVendedores)
+
+        cQuery += " AND C5_VEND1 IN " + cVendedores
+
+    EndIf
+
+    If !Empty(cProdutos)
+
+        cQuery += " AND D2_COD IN " + cProdutos
+
+    EndIf
+
+    cQuery += "         AND D2_CLIENTE NOT IN (
+    cQuery += "             SELECT DISTINCT D2_CLIENTE
+    cQuery += "             FROM " + RetSQLName("SD2") + " SD2SQ
+    cQuery += "             INNER JOIN " + RetSQLName("SC5") + " SC5SQ 
+    cQuery += "                 ON C5_FILIAL = D2_FILIAL 
+    cQuery += "                 AND C5_NUM = D2_PEDIDO 
+    cQuery += "                 AND SC5SQ.D_E_L_E_T_ = ' '
+    cQuery += "             WHERE 
+    cQuery += "                 SD2SQ.D_E_L_E_T_ = ' ' 
+    cQuery += "                 AND LEFT(D2_EMISSAO,4) = CAST(CAST(LEFT(SD2.D2_EMISSAO, 4) AS INT) + 1 AS VARCHAR)
+    cQuery += "                 AND SUBSTRING(D2_EMISSAO,5,2) IN " + cMeses
+    cQuery += "                 AND D2_FILIAL IN " + cFiliais + " AND D2_QTDEDEV != D2_QUANT
+    
+    If !Empty(cVendedores)
+
+        cQuery += " AND C5_VEND1 IN " + cVendedores
+    
+    EndIf
+
+    If !Empty(cProdutos)
+
+        cQuery += " AND D2_COD IN " + cProdutos
+    
+    EndIf
+
+    cQuery += "         )
+    cQuery += "     GROUP BY LEFT(D2_EMISSAO,4)
+    cQuery += " )
+    cQuery += " SELECT 
+    cQuery += "     CAST(CAST(ANO AS INT) + 1 AS VARCHAR),
+    cQuery += "     NAO_COMPRARAM,
+    cQuery += "     CASE 
+    cQuery += "         WHEN LAG(NAO_COMPRARAM) OVER (ORDER BY ANO) = 0 THEN NULL
+    cQuery += "         ELSE 
+    cQuery += "             ROUND(
+    cQuery += "                 ((CAST(NAO_COMPRARAM AS FLOAT) - LAG(NAO_COMPRARAM) OVER (ORDER BY ANO)) 
+    cQuery += "                  / LAG(NAO_COMPRARAM) OVER (ORDER BY ANO)) * 100, 
+    cQuery += "                 2
+    cQuery += "             )
+    cQuery += "     END AS VARIACAO
+    cQuery += " FROM ClientesNaoCompraram
+    cQuery += " ORDER BY ANO DESC
+
+Return cQuery
+
+
+Static Function QryAuRdCli(jBody, lAumento)
+
+    Local cQuery        := ""
+    Local jBodyInfo     := FormatBody(jBody)
+    Local aAnos         := { GetMax(jBody:GetJsonObject("anos")), AllTrim(cValToChar(Val(GetMax(jBody:GetJsonObject("anos")))-1)) }
+    Local cMeses        := jBodyInfo:GetJsonObject("meses")
+    Local cFiliais      := jBodyInfo:GetJsonObject("filiais")
+    Local cVendedores   := jBodyInfo:GetJsonObject("vendedores")
+    Local cProdutos     := jBodyInfo:GetJsonObject("produtos")
+
+    cQuery += " SELECT
+    cQuery += "    LEFT(SD2ATU.ANO, 4) AS ANO,
+    cQuery += "    COUNT(A1_COD+A1_LOJA) AS QTD_CLIENTES,
+    cQuery += " CASE 
+    cQuery += "     WHEN LAG(COUNT(A1_COD+A1_LOJA)) OVER (ORDER BY LEFT(SD2ATU.ANO, 4)) = 0 THEN NULL
+    cQuery += "     ELSE 
+    cQuery += "         ROUND(
+    cQuery += "             ((CAST(COUNT(A1_COD+A1_LOJA) AS FLOAT) - LAG(COUNT(A1_COD+A1_LOJA)) OVER (ORDER BY LEFT(SD2ATU.ANO, 4))) 
+    cQuery += "             / LAG(COUNT(A1_COD+A1_LOJA)) OVER (ORDER BY LEFT(SD2ATU.ANO, 4))) * 100, 
+    cQuery += "             2
+    cQuery += "         )
+    cQuery += " END AS VARIACAO
+    cQuery += " FROM " + RetSQLName("SA1") + " SA1
+    cQuery += " INNER JOIN (
+    cQuery += "     SELECT D2_CLIENTE, D2_LOJA, LEFT(D2_EMISSAO,4) AS ANO, SUM(D2_TOTAL-D2_VALDEV) AS TOTAL
+    cQuery += "     FROM " + RetSQLName("SD2") + " SD2
+    cQuery += "     INNER JOIN " + RetSQLName("SC5") + " SC5 ON C5_FILIAL = D2_FILIAL AND C5_NUM = D2_PEDIDO AND SC5.D_E_L_E_T_ = ' '
+    cQuery += "     WHERE SD2.D_E_L_E_T_ = ' ' AND LEFT(D2_EMISSAO,4) IN " + FormatIn(ArrTokStr(aAnos,","),",")
+    cQuery += "     AND SUBSTRING(D2_EMISSAO,5,2) IN " + cMeses + " AND D2_FILIAL IN " + cFiliais
+
+    If !Empty(cVendedores)
+
+        cQuery += " AND C5_VEND1 IN " + cVendedores
+
+    EndIf
+
+    If !Empty(cProdutos)
+
+        cQuery += " AND D2_COD IN " + cProdutos
+    
+    EndIf
+    
+    cQuery += "     GROUP BY D2_CLIENTE, D2_LOJA, LEFT(D2_EMISSAO,4)
+    cQuery += " ) SD2ATU ON SD2ATU.D2_CLIENTE = A1_COD AND SD2ATU.D2_LOJA = A1_LOJA
+    cQuery += " INNER JOIN (
+    cQuery += "     SELECT D2_CLIENTE, D2_LOJA, LEFT(D2_EMISSAO,4) AS ANO, SUM(D2_TOTAL-D2_VALDEV) AS TOTAL
+    cQuery += "     FROM " + RetSQLName("SD2") + " SD2
+    cQuery += "     INNER JOIN " + RetSQLName("SC5") + " SC5 ON C5_FILIAL = D2_FILIAL AND C5_NUM = D2_PEDIDO AND SC5.D_E_L_E_T_ = ' '
+    cQuery += "     WHERE SD2.D_E_L_E_T_ = ' '
+    cQuery += "     AND SUBSTRING(D2_EMISSAO,5,2) IN " + cMeses + " AND D2_FILIAL IN " + cFiliais
+
+    If !Empty(cVendedores)
+
+        cQuery += " AND C5_VEND1 IN " + cVendedores
+
+    EndIf
+
+    If !Empty(cProdutos)
+
+        cQuery += " AND D2_COD IN " + cProdutos
+
+    EndIf
+
+    cQuery += "     GROUP BY D2_CLIENTE, D2_LOJA, LEFT(D2_EMISSAO,4)
+    cQuery += " ) SD2ANT ON SD2ANT.D2_CLIENTE = A1_COD 
+    cQuery += "         AND SD2ANT.D2_LOJA = A1_LOJA
+    cQuery += "         AND SD2ANT.ANO = CAST(CAST(LEFT(SD2ATU.ANO, 4) AS INT) - 1 AS VARCHAR)
+    cQuery += " WHERE "
+    cQuery += IIf(lAumento, " SD2ATU.TOTAL > SD2ANT.TOTAL ", " SD2ATU.TOTAL < SD2ANT.TOTAL ")
+    cQuery += "   AND SA1.D_E_L_E_T_ = ' '
+    cQuery += " GROUP BY LEFT(SD2ATU.ANO, 4)
+    cQuery += " ORDER BY ANO DESC
+
+Return cQuery
+
+
 Static Function QryFatXPer(jBody)
 
     Local cQuery        := ""
@@ -284,7 +746,7 @@ Static Function QryFatXPer(jBody)
     Local cVendedores   := jBodyInfo:GetJsonObject("vendedores")
     Local cProdutos     := jBodyInfo:GetJsonObject("produtos")
 
-    cQuery += " SELECT LEFT(D2_EMISSAO,4) AS ANO, SUBSTRING(D2_EMISSAO,5,2) AS MES, SUM(D2_TOTAL) AS VALOR
+    cQuery += " SELECT LEFT(D2_EMISSAO,4) AS ANO, SUBSTRING(D2_EMISSAO,5,2) AS MES, SUM(D2_TOTAL-D2_VALDEV) AS VALOR
     cQuery += " FROM " + RetSQLName("SD2") + " SD2
     cQuery += " INNER JOIN " + RetSQLName("SC5") + " SC5 ON C5_FILIAL = D2_FILIAL AND C5_NUM = D2_PEDIDO AND SC5.D_E_L_E_T_ = ' '
     cQuery += " WHERE SD2.D_E_L_E_T_ = ' ' AND LEFT(D2_EMISSAO,4) IN " + cAnos + " AND SUBSTRING(D2_EMISSAO,5,2) IN " + cMeses
@@ -317,7 +779,7 @@ Static Function QryHistFat(jBody)
     Local cVendedores   := jBodyInfo:GetJsonObject("vendedores")
     Local cProdutos     := jBodyInfo:GetJsonObject("produtos")
 
-    cQuery += " SELECT LEFT(D2_EMISSAO,4) AS ANO, SUM(D2_TOTAL) AS VALOR
+    cQuery += " SELECT LEFT(D2_EMISSAO,4) AS ANO, SUM(D2_TOTAL-D2_VALDEV) AS VALOR
     cQuery += " FROM " + RetSQLName("SD2") + " SD2
     cQuery += " INNER JOIN " + RetSQLName("SC5") + " SC5 ON C5_FILIAL = D2_FILIAL AND C5_NUM = D2_PEDIDO AND SC5.D_E_L_E_T_ = ' '
     cQuery += " WHERE SD2.D_E_L_E_T_ = ' ' AND LEFT(D2_EMISSAO,4) IN " + cAnos + " AND SUBSTRING(D2_EMISSAO,5,2) IN " + cMeses
@@ -350,7 +812,7 @@ Static Function QryCatCli(jBody)
     Local cVendedores   := jBodyInfo:GetJsonObject("vendedores")
     Local cProdutos     := jBodyInfo:GetJsonObject("produtos")
 
-    cQuery += " SELECT A1_YCATEGO AS CATEGORIA, CAST(SUM(D2_TOTAL) * 100.0 / SUM(SUM(D2_TOTAL)) OVER() AS DECIMAL(5,2)) AS PERCENTUAL
+    cQuery += " SELECT A1_YCATEGO AS CATEGORIA, CAST(SUM(D2_TOTAL-D2_VALDEV) * 100.0 / SUM(SUM(D2_TOTAL-D2_VALDEV)) OVER() AS DECIMAL(5,2)) AS PERCENTUAL
     cQuery += " FROM " + RetSQLName("SD2") + " SD2
     cQuery += " INNER JOIN " + RetSQLName("SC5") + " SC5 ON C5_FILIAL = D2_FILIAL AND C5_NUM = D2_PEDIDO AND SC5.D_E_L_E_T_ = ' '
     cQuery += " INNER JOIN " + RetSQLName("SA1") + " SA1 ON A1_COD = D2_CLIENTE AND A1_LOJA = D2_LOJA AND SA1.D_E_L_E_T_ = ' '
@@ -408,7 +870,7 @@ Static Function QryCatProd(jBody)
     cQuery += " WITH RANKING_ULT_ANO AS (
     cQuery += "     SELECT TOP 10
     cQuery += "         D2_COD,
-    cQuery += "         SUM(D2_TOTAL) AS TOTAL
+    cQuery += "         SUM(D2_TOTAL-D2_VALDEV) AS TOTAL
     cQuery += "     FROM " + RetSQLName("SD2") + " SD2
     cQuery += "     INNER JOIN " + RetSQLName("SC5") + " SC5
     cQuery += "         ON C5_FILIAL = D2_FILIAL 
@@ -437,7 +899,7 @@ Static Function QryCatProd(jBody)
     cQuery += " SELECT
     cQuery += "     B1_DESC AS DESCRICAO,
     cQuery += "     LEFT(D2_EMISSAO, 4) AS ANO,
-    cQuery += "     SUM(D2_TOTAL) AS VALOR,
+    cQuery += "     SUM(D2_TOTAL-D2_VALDEV) AS VALOR,
     cQuery += "     T.TOTAL
     cQuery += " FROM " + RetSQLName("SD2") + " SD2
     cQuery += " INNER JOIN " + RetSQLName("SC5") + " SC5
