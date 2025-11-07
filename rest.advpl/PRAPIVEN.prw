@@ -93,7 +93,7 @@ WsMethod Get Vend WsService vendedores
     SA3->(dbSetOrder(1))
     SA3->(dbGoTop())
 
-    if SA3->(dbSeek(xFilial("SA3")+padL(cCodVend, TamSX3("A3_COD")[1], " "), .T.))
+    if SA3->(dbSeek(xFilial("SA3")+padR(cCodVend, TamSX3("A3_COD")[1], " "), .T.))
 
         jResponse['success']        := lRet
         jResponse['message']        := "Vendedor encontrado com sucesso"

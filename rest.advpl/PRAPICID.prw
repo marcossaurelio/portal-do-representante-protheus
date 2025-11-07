@@ -94,7 +94,7 @@ WsMethod Get Cid WsService cidades
 
     nTamCampo := tamSX3("CC2_EST")[1] + tamSX3("CC2_CODMUN")[1] // Tamanho do campo A1_COD
 
-    if CC2->(dbSeek(xFilial("CC2")+padL(cCodigoCidade, nTamCampo, " ")))
+    if CC2->(dbSeek(xFilial("CC2")+padR(cCodigoCidade, nTamCampo, " ")))
 
         jResponse['success']    := .T.
         jResponse['codigo']     := CC2->CC2_CODMUN

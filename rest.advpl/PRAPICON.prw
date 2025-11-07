@@ -91,7 +91,7 @@ WsMethod Get Cond WsService condicoes
     SE4->(dbSetOrder(1))
     SE4->(dbGoTop())
 
-    if SE4->(dbSeek(xFilial("SE4")+padL(cCodCond, TamSX3("E4_CODIGO")[1], " "), .T.))
+    if SE4->(dbSeek(xFilial("SE4")+padR(cCodCond, TamSX3("E4_CODIGO")[1], " "), .T.))
 
         jResponse['success']        := lRet
         jResponse['message']        := "Condição de pagamento encontrada com sucesso"

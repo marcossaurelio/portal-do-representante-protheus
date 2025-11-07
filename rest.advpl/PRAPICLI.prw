@@ -116,7 +116,7 @@ WsMethod Get Clnt WsService clientes
 
     SA1->(dbGoTop())
 
-    if SA1->(dbSeek(xFilial("SA1")+padL(cCodigoCliente, nTamCampo, " ")))
+    if SA1->(dbSeek(xFilial("SA1")+padR(cCodigoCliente, nTamCampo, " "))) .And. (AllTrim(SA1->A1_COD + SA1->A1_LOJA) == cCodigoCliente .Or. AllTrim(SA1->A1_CGC) == cCodigoCliente)
 
         if validaCliente(SA1->A1_COD,SA1->A1_LOJA,cCodVendedor) .or. SA1->A1_VEND == cCodVendedor
 
