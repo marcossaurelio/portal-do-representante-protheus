@@ -470,6 +470,9 @@ Static Function QryFatAcum(jBody)
     Local cVendedores   := jBodyInfo:GetJsonObject("vendedores")
     Local cProdutos     := jBodyInfo:GetJsonObject("produtos")
 
+    cQuery += " SELECT ANO, SUM(VALOR) AS VALOR
+    cQuery += " FROM (
+
     cQuery += " SELECT TOP 2 LEFT(D2_EMISSAO,4) AS ANO, SUM(D2_TOTAL-D2_VALDEV) AS VALOR
     cQuery += " FROM " + RetSQLName("SD2") + " SD2
     cQuery += " INNER JOIN " + RetSQLName("SC5") + " SC5 ON C5_FILIAL = D2_FILIAL AND C5_NUM = D2_PEDIDO AND SC5.D_E_L_E_T_ = ' '
@@ -489,6 +492,16 @@ Static Function QryFatAcum(jBody)
     EndIf
 
     cQuery += " GROUP BY LEFT(D2_EMISSAO,4)
+
+    cQuery += " UNION ALL
+
+    cQuery += " SELECT '" + aAnos[1] + "' AS ANO, 0 AS VALOR
+	cQuery += " UNION ALL
+	cQuery += " SELECT '" + aAnos[2] + "', 0
+
+    cQuery += " ) AS DADOS"
+
+    cQuery += " GROUP BY ANO
     cQuery += " ORDER BY ANO DESC
 
 Return cQuery
