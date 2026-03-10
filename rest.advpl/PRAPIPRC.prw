@@ -10,6 +10,7 @@ WsRestful precificacao Description "Precificacao"
     WsMethod Post   PrPrd   Description "Consulta precificacao de produto"  Path "/produto"
     WsMethod Get    TabPr   Description "Consulta tabelas de precificacao"  Path "/tabelas"
     WsMethod Get    DlTab   Description "Download tabela de precificacao"   Path "/tabelas/download/{tabela}"
+    WsMethod Post   FxPrc   Description "Consulta faixas de preço"          Path "/faixas"
 
 End WsRestful
 
@@ -207,6 +208,60 @@ WsMethod Get DlTab WsService precificacao
 return lRet
 
 
+WsMethod Post FxPrc WsService precificacao
+
+    local jResponse     := JsonObject():new()       as json
+    local jBody         := JsonObject():new()       as json
+    local jFaixa        := JsonObject():new()       as json
+    local cBody         := self:getContent()        as character
+    local cQuery        := ""                       as character
+    local cAlias        := ""                       as character
+    local aFaixas       := {}                       as array
+    local nI            := 0                        as numeric
+    local lRet          := .T.
+    
+    jBody:fromJson(cBody)
+
+    cQuery := qryFxPreco(jBody)
+    cAlias := getNextAlias()
+
+    mpSysOpenQuery(cQuery, cAlias)
+
+    dbSelectArea(cAlias)
+    (cAlias)->(dbGoTop())
+
+    if !(cAlias)->(eof())
+
+        for nI := 1 to 5
+
+            if &("(cAlias)->DA0_YMXFX" + cValToChar(nI)) <= 0
+
+                exit
+
+            endif
+
+            jFaixa := JsonObject():new()
+
+            jFaixa["faixa"]         := nI
+            jFaixa["preco"]         := &("(cAlias)->DA1_YPRFX" + cValToChar(nI))
+            jFaixa["comissao"]      := &("(cAlias)->DA0_YMXFX" + cValToChar(nI))
+
+            aAdd(aFaixas, jFaixa)
+
+        next
+
+    endif
+
+    jResponse["success"]            := .T.
+    jResponse["faixas"]             := aFaixas
+
+    (cAlias)->(dbCloseArea())
+            
+    self:setResponse(jResponse:toJson())
+
+return lRet
+
+
 static function getDiasPorCondPag(cCondPg as character)
 
     local nDias     := 0                        as numeric
@@ -277,3 +332,29 @@ Static Function NomeUndCar(cCodUndCar)
     EndCase
 
 Return cCodUndCar
+
+
+static function qryFxPreco(jBody)
+
+    local cQuery            := ""
+    local cCategCliente     := jBody:getJsonObject('categoriaCliente')
+    local cTipoFrete        := jBody:getJsonObject('tipoFrete')
+    local nDiasPagto        := getDiasPorCondPag(jBody:getJsonObject('condPagamento'))
+    local cProduto          := jBody:getJsonObject('produto')
+    local cFilialOrc        := jBody:getJsonObject('filial')
+    local cUnidadeCarreg    := jDadosProduto:getJsonObject('unidadeCarregamento')
+    local lFilialCotacao    := left(cFilialOrc,4) == "0101"
+
+    cQuery += " SELECT TOP 1 *
+    cQuery += " FROM
+    cQuery += "     " + retSQLName("DA1") + " DA1
+    cQuery += " INNER JOIN
+    cQuery += "     " + retSQLName("DA0") + " DA0 ON DA0_FILIAL = DA1_FILIAL AND DA0_CODTAB = DA1_CODTAB AND DA0.D_E_L_E_T_ = ' '
+    cQuery += " WHERE
+    cQuery += "     DA0_DATDE <= " + dToS(date()) + " AND (DA0_DATATE >= " + dToS(date()) + " OR DA0_DATATE = ' ') AND DA0_ATIVO = '1'
+    cQuery += "     AND DA0_YPOREP = 'S' AND (TRIM(DA0_YCATEG) LIKE '%" + cCategCliente + "%' OR DA0_YCATEG = ' ')
+    cQuery += "     AND DA0_YFRETE = '" + iif( lFilialCotacao, "F", cTipoFrete ) + "' AND DA0_YMAXDP >= " + cValToChar(nDiasPagto)
+    cQuery += "     AND DA1.D_E_L_E_T_ = ' ' AND DA1_FILIAL = '" + left(cFilialOrc,4) + "' AND DA1_CODPRO = '" + allTrim(cProduto) + "'
+    cQuery += "     AND DA1_ATIVO = '1' AND DA1_DATVIG <= " + dToS(date()) + " AND DA0_YUNCAR = '" + cUnidadeCarreg + "'
+
+return cQuery
