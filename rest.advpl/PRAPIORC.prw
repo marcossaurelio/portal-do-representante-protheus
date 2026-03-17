@@ -129,15 +129,18 @@ WsMethod Get OrcDt WsService orcamentos
     jResponse['orcamento']              := (cAliasCabecalho)->CJ_NUM
     jResponse['unidadeCarregamento']    := AllTrim((cAliasCabecalho)->CJ_YUNCARG)
     jResponse['vendedor']               := (cAliasCabecalho)->CJ_YVEND
+    jResponse['nomeVendedor']           := posicione("SA3",1,xFilial("SA3") + (cAliasCabecalho)->CJ_YVEND,"A3_NOME")
     jResponse['situacao']               := iif( sToD((cAliasCabecalho)->CJ_VALIDA) < date() .And. (cAliasCabecalho)->CJ_YPRSITU $ "CP;PP", "EX", (cAliasCabecalho)->CJ_YPRSITU )
     jResponse['cliente']                := (cAliasCabecalho)->CJ_CLIENTE
     jResponse['loja']                   := (cAliasCabecalho)->CJ_LOJA
     jResponse['nomeCliente']            := posicione("SA1",1,xFilial("SA1") + cCliLoja,"A1_NOME")
     jResponse['dataEmissao']            := (cAliasCabecalho)->CJ_EMISSAO
     jResponse['condPag']                := (cAliasCabecalho)->CJ_CONDPAG
+    JResponse['condPagDesc']            := posicione("SE4",1,xFilial("SE4")+(cAliasCabecalho)->CJ_CONDPAG,"E4_DESCRI")
     jResponse['observacao']             := (cAliasCabecalho)->CJ_YOBS
     jResponse['tipoFrete']              := (cAliasCabecalho)->CJ_TPFRETE
     jResponse['condPagFrete']           := (cAliasCabecalho)->CJ_YCPAGFR
+    jResponse['condPagFreteDesc']       := posicione("SE4",1,xFilial("SE4")+(cAliasCabecalho)->CJ_YCPAGFR,"E4_DESCRI")
     jResponse['valorFrete']             := (cAliasCabecalho)->CJ_FRETE
     jResponse['tipoCarga']              := (cAliasCabecalho)->CJ_YTPCARG
     jResponse['valorDescarga']          := (cAliasCabecalho)->CJ_YVDESCA
@@ -149,6 +152,7 @@ WsMethod Get OrcDt WsService orcamentos
     jResponse['responsavelFrete']       := (cAliasCabecalho)->CJ_YRESPFR == "T"
     jResponse['estadoDestino']          := (cAliasCabecalho)->CJ_YUFDEST
     jResponse['cidadeDestino']          := (cAliasCabecalho)->CJ_YMUNDES
+    jResponse['nomeCidadeDestino']      := posicione("CC2",1,xFilial("CC2")+(cAliasCabecalho)->CJ_YUFDEST+(cAliasCabecalho)->CJ_YMUNDES,"CC2_MUN")
     jResponse['descontoFinanceiro']     := (cAliasCabecalho)->CJ_YDESCF
     jResponse['tipoDescarga']           := (cAliasCabecalho)->CJ_YDESCAR
     jResponse['veiculoProprio']         := iif( (cAliasCabecalho)->CJ_YVEIPRO == "S", .T., .F. )

@@ -342,7 +342,7 @@ static function qryFxPreco(jBody)
     local nDiasPagto        := getDiasPorCondPag(jBody:getJsonObject('condPagamento'))
     local cProduto          := jBody:getJsonObject('produto')
     local cFilialOrc        := jBody:getJsonObject('filial')
-    local cUnidadeCarreg    := jDadosProduto:getJsonObject('unidadeCarregamento')
+    local cUnidadeCarreg    := jBody:getJsonObject('unidadeCarregamento')
     local lFilialCotacao    := left(cFilialOrc,4) == "0101"
 
     cQuery += " SELECT TOP 1 *
