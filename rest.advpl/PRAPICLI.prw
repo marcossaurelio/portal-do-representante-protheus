@@ -253,7 +253,10 @@ WsMethod Post CrCli WsService clientes
     local cNomeMunicipio    := ""                       as character
     local lRet              := .T.
 
-    private lMsErroAuto     := .F.                      as logical
+    Private lMsErroAuto     := .F.                      as logical
+    Private lAutoErrNoFile  := .F.                      as logical
+
+    GetAutoGRLog()
     
     jBody:fromJson(cBody)
 

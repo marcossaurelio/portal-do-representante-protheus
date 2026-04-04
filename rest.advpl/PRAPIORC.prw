@@ -206,7 +206,10 @@ WsMethod Post OrcIn WsService orcamentos
     local aItens            := {}                       as array
     local lRet              := .T.
 
-    Private lMsErroAuto       := .F.                      as logical
+    Private lMsErroAuto     := .F.                      as logical
+    Private lAutoErrNoFile  := .F.                      as logical
+
+    GetAutoGRLog()
 
     jBody:fromJson(cBody)
 
@@ -262,11 +265,14 @@ WsMethod Put OrcUp WsService orcamentos
     local aItens            := {}                       as array
     local lRet              := .T.
 
-    Private lMsErroAuto       := .F.                      as logical
+    Private lMsErroAuto     := .F.                      as logical
+    Private lAutoErrNoFile  := .F.                      as logical
+
+    GetAutoGRLog()
 
     jBody:fromJson(cBody)
 
-    aCabecalho := arrayCabecalho(jBody)
+    aCabecalho := arrayCabecalho(jBody,.T.)
     aItens     := arrayItens(jBody)
 
     if !empty(aCabecalho)
@@ -618,10 +624,21 @@ static function qryDados(cFilialOrc, cOrcamento)
 return {cQueryCabecalho,cQueryItens}
 
 
-static function arrayCabecalho(jBody as json) as array
+static function arrayCabecalho(jBody as json, lAlteracao as logical) as array
 
     local aCabecalho        := {} as array
     local nDiasVencimento   := U_DefPort("VENCORCAME",7)
+    local cClienteAtual     := posicione("SCJ",1,xFilial("SCJ")+jBody:getJsonObject('orcamento'),"CJ_CLIENTE")
+    local cLojaCliAtual     := posicione("SCJ",1,xFilial("SCJ")+jBody:getJsonObject('orcamento'),"CJ_LOJA")
+
+    default lAlteracao      := .F.
+
+    if lAlteracao
+
+        aAdd(aCabecalho, { "CJ_CLIENTE",    cClienteAtual,           nil } )
+        aAdd(aCabecalho, { "CJ_LOJA",       cLojaCliAtual,           nil } )
+
+    endif
 
     iif( !empty(jBody:getJsonObject('filial')),                 aAdd( aCabecalho, { "CJ_FILIAL",    jBody:getJsonObject('filial'),              nil } ) , nil )
     iif( !empty(jBody:getJsonObject('unidadeCarregamento')),    aAdd( aCabecalho, { "CJ_YUNCARG",   jBody:getJsonObject('unidadeCarregamento'), nil } ) , nil )
