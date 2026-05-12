@@ -104,51 +104,46 @@ WsMethod Post FrMar WsService frete
     cEstadoDestino  := jBody:getJsonObject('estadoDestino')
     cCidadeDestino  := jBody:getJsonObject('cidadeDestino')
     nPesoCarga      := jBody:getJsonObject('pesoTotal')
+    cTipoContainer  := jBody:getJsonObject('tipoContainer')
 
     if cEstadoDestino == "RJ"
 
-        if nPesoCarga <= nPyldC20RJ*1000 .Or. nPyldC20RJ == nPyldC40RJ
+        if cTipoContainer == "C20"
 
             nValorFrete := nPrcC20RJ
-            cTipoContainer := "C20"
             nPayloadUtilizado := nPyldC20RJ
 
         else
 
             nValorFrete := nPrcC40RJ
-            cTipoContainer := "C40"
             nPayloadUtilizado := nPyldC40RJ
 
         endif
 
     elseif cEstadoDestino == "SP"
 
-        if nPesoCarga <= nPyldC20SP*1000 .Or. nPyldC20SP == nPyldC40SP
+        if cTipoContainer == "C20"
 
             nValorFrete := nPrcC20SP
-            cTipoContainer := "C20"
             nPayloadUtilizado := nPyldC20SP
 
         else
 
             nValorFrete := nPrcC40SP
-            cTipoContainer := "C40"
             nPayloadUtilizado := nPyldC40SP
 
         endif
 
     else // Considerando frete geral para outros estados
 
-        if nPesoCarga <= nPyldC20Geral*1000 .Or. nPyldC20Geral == nPyldC40Geral
+        if cTipoContainer == "C20"
 
             nValorFrete := nPrcC20Geral
-            cTipoContainer := "C20"
             nPayloadUtilizado := nPyldC20Geral
 
         else
 
             nValorFrete := nPrcC40Geral
-            cTipoContainer := "C40"
             nPayloadUtilizado := nPyldC40Geral
 
         endif

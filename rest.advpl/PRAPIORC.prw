@@ -143,6 +143,7 @@ WsMethod Get OrcDt WsService orcamentos
     jResponse['condPagFreteDesc']       := posicione("SE4",1,xFilial("SE4")+(cAliasCabecalho)->CJ_YCPAGFR,"E4_DESCRI")
     jResponse['valorFrete']             := (cAliasCabecalho)->CJ_FRETE
     jResponse['tipoCarga']              := (cAliasCabecalho)->CJ_YTPCARG
+    jResponse['tipoContainer']          := (cAliasCabecalho)->CJ_YTPCONT
     jResponse['valorDescarga']          := (cAliasCabecalho)->CJ_YVDESCA
     jResponse['cargaMaxima']            := (cAliasCabecalho)->CJ_YCARMAX
     jResponse['paletizacao10x1']        := (cAliasCabecalho)->CJ_YPP10X1
@@ -652,6 +653,7 @@ static function arrayCabecalho(jBody as json, lAlteracao as logical) as array
     iif( !empty(jBody:getJsonObject('condPagFrete')),           aAdd( aCabecalho, { "CJ_YCPAGFR",   jBody:getJsonObject('condPagFrete'),        nil } ) , nil )
     iif( !empty(jBody:getJsonObject('valorFrete')),             aAdd( aCabecalho, { "CJ_FRETE",     jBody:getJsonObject('valorFrete'),          nil } ) , nil )
     iif( !empty(jBody:getJsonObject('tipoCarga')),              aAdd( aCabecalho, { "CJ_YTPCARG",   jBody:getJsonObject('tipoCarga'),           nil } ) , nil )
+    iif( !empty(jBody:getJsonObject('tipoContainer')),          aAdd( aCabecalho, { "CJ_YTPCONT",   jBody:getJsonObject('tipoContainer'),       nil } ) , nil )
     iif( !empty(jBody:getJsonObject('valorDescarga')),          aAdd( aCabecalho, { "CJ_YVDESCA",   jBody:getJsonObject('valorDescarga'),       nil } ) , nil )
     iif( !empty(jBody:getJsonObject('tipoFrete')),              aAdd( aCabecalho, { "CJ_TPFRETE",   jBody:getJsonObject('tipoFrete'),           nil } ) , nil )
     iif( !empty(jBody:getJsonObject('cargaMaxima')),            aAdd( aCabecalho, { "CJ_YCARMAX",   jBody:getJsonObject('cargaMaxima'),         nil } ) , nil )
