@@ -8,10 +8,10 @@ WsRestful clientes Description "Clientes"
     WsData filter       AS Character
     WsData sellerId     AS Character
 
-    WsMethod Get Clnts  Description "Retorna os clientes disponiveis"                  Path "/"
-    WsMethod Get Clnt   Description "Retorna um cliente especifico"                    Path "/{codigo}"
-    WsMethod Get ClPub  Description "Retorna os dados publicos de um CNPJ"             Path "/dados-publicos/{cnpj}"
-    WsMethod Post CrCli Description "Cadastra um cliente no Protheus"                  Path "/incluir"
+    WsMethod Get Clnts  Description "Retorna os clientes disponiveis"                  Path "/portal-do-representante/clientes/"
+    WsMethod Get Clnt   Description "Retorna um cliente especifico"                    Path "/portal-do-representante/clientes/{codigo}"
+    WsMethod Get ClPub  Description "Retorna os dados publicos de um CNPJ"             Path "/portal-do-representante/clientes/dados-publicos/{cnpj}"
+    WsMethod Post CrCli Description "Cadastra um cliente no Protheus"                  Path "/portal-do-representante/clientes/incluir"
 
 End WsRestful
 

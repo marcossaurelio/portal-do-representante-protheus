@@ -7,8 +7,8 @@ WsRestful condicoes Description "Condicoes de pagamento"
     WsData pageSize AS Character
     WsData filter   AS Character
 
-    WsMethod Get Conds   Description "Retorna as condições de pagamento" Path "/"
-    WsMethod Get Cond    Description "Retorna uma condição de pagamento específica" Path "/{codigo}"
+    WsMethod Get Conds   Description "Retorna as condições de pagamento"            Path "/portal-do-representante/condicoes/"
+    WsMethod Get Cond    Description "Retorna uma condição de pagamento específica" Path "/portal-do-representante/condicoes/{codigo}"
 
 End WsRestful
 

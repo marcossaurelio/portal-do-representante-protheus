@@ -8,8 +8,8 @@ WsRestful produtos Description "Produtos"
     WsData filter       AS Character
     WsData location     AS Character
 
-    WsMethod Get Prods  Description "Retorna os produtos disponíveis"               Path "/"
-    WsMethod Get Prod   Description "Retorna um produto específico"                 Path "/{codigo}"
+    WsMethod Get Prods  Description "Retorna os produtos disponíveis"       Path "/portal-do-representante/produtos/"
+    WsMethod Get Prod   Description "Retorna um produto específico"         Path "/portal-do-representante/produtos/{codigo}"
 
 End WsRestful
 

@@ -3,7 +3,7 @@
 
 WsRestful login Description "Login"
 
-    WsMethod Post Login   Description "Valida os dados de login no portal" Path "/"
+    WsMethod Post Login   Description "Valida os dados de login no portal"  Path "/portal-do-representante/login/"
 
 End WsRestful
 

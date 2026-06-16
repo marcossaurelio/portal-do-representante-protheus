@@ -5,16 +5,16 @@ WsRestful dashboard Description "Dashboard"
 
     WsData value    AS Character
 
-    WsMethod Post   FatAc   Description "Retorna o faturamento acumulado"       Path "/faturamento-acumulado"
-    WsMethod Post   ClNov   Description "Retorna o número de clientes novos"    Path "/clientes-novos"
-    WsMethod Post   ClNCo   Description "Retorna clientes que não compraram"    Path "/clientes-nao-compraram"
-    WsMethod Post   AumCl   Description "Retorna aos clientes com aumento"      Path "/clientes-aumento"
-    WsMethod Post   RedCl   Description "Retorna aos clientes com redução"      Path "/clientes-reducao"
-    WsMethod Post   FaPer   Description "Retorna o faturamento por período"     Path "/faturamento-x-periodo"
-    WsMethod Post   HisFa   Description "Retorna o histórico de faturamento"    Path "/historico-faturamento"
-    WsMethod Post   CatCl   Description "Categorias de Clientes"                Path "/categorias-clientes"
-    WsMethod Post   CatPr   Description "Categorias de Produtos"                Path "/categorias-produtos"
-    WsMethod Get    Anos    Description "Anos para filtro"                      Path "/filtros/anos"
+    WsMethod Post   FatAc   Description "Retorna o faturamento acumulado"       Path "/portal-do-representante/dashboard/faturamento-acumulado"
+    WsMethod Post   ClNov   Description "Retorna o número de clientes novos"    Path "/portal-do-representante/dashboard/clientes-novos"
+    WsMethod Post   ClNCo   Description "Retorna clientes que não compraram"    Path "/portal-do-representante/dashboard/clientes-nao-compraram"
+    WsMethod Post   AumCl   Description "Retorna aos clientes com aumento"      Path "/portal-do-representante/dashboard/clientes-aumento"
+    WsMethod Post   RedCl   Description "Retorna aos clientes com redução"      Path "/portal-do-representante/dashboard/clientes-reducao"
+    WsMethod Post   FaPer   Description "Retorna o faturamento por período"     Path "/portal-do-representante/dashboard/faturamento-x-periodo"
+    WsMethod Post   HisFa   Description "Retorna o histórico de faturamento"    Path "/portal-do-representante/dashboard/historico-faturamento"
+    WsMethod Post   CatCl   Description "Categorias de Clientes"                Path "/portal-do-representante/dashboard/categorias-clientes"
+    WsMethod Post   CatPr   Description "Categorias de Produtos"                Path "/portal-do-representante/dashboard/categorias-produtos"
+    WsMethod Get    Anos    Description "Anos para filtro"                      Path "/portal-do-representante/dashboard/filtros/anos"
 
 End WsRestful
 

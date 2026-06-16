@@ -10,14 +10,14 @@ WsRestful orcamentos Description "Orcamentos"
     WsData branchId         AS Character
     WsData budget           AS Character
 
-    WsMethod Post   Orcs    Description "Retorna os orcamentos de um vendedor"      Path "/"
-    WsMethod Get    OrcDt   Description "Retorna os dados de um orcamento"          Path "/dados"
-    WsMethod Post   OrcIn   Description "Inclui um orcamento"                       Path "/incluir"
-    WsMethod Put    OrcUp   Description "Altera um orcamento"                       Path "/alterar"
-    WsMethod Post   Indic   Description "Retorna os indicadores de orcamentos"      Path "/indicadores"
-    WsMethod Put    ApCot   Description "Aprova uma cotação"                        Path "/cotacao/aprovar"
-    WsMethod Put    RjCot   Description "Rejeita uma cotação"                       Path "/cotacao/rejeitar"
-    WsMethod Put    ApPPd   Description "Envia Pré Pedido para aprovação"           Path "/pre-pedido/aprovar"
+    WsMethod Post   Orcs    Description "Retorna os orcamentos de um vendedor"      Path "/portal-do-representante/orcamentos/"
+    WsMethod Get    OrcDt   Description "Retorna os dados de um orcamento"          Path "/portal-do-representante/orcamentos/dados"
+    WsMethod Post   OrcIn   Description "Inclui um orcamento"                       Path "/portal-do-representante/orcamentos/incluir"
+    WsMethod Put    OrcUp   Description "Altera um orcamento"                       Path "/portal-do-representante/orcamentos/alterar"
+    WsMethod Post   Indic   Description "Retorna os indicadores de orcamentos"      Path "/portal-do-representante/orcamentos/indicadores"
+    WsMethod Put    ApCot   Description "Aprova uma cotação"                        Path "/portal-do-representante/orcamentos/cotacao/aprovar"
+    WsMethod Put    RjCot   Description "Rejeita uma cotação"                       Path "/portal-do-representante/orcamentos/cotacao/rejeitar"
+    WsMethod Put    ApPPd   Description "Envia Pré Pedido para aprovação"           Path "/portal-do-representante/orcamentos/pre-pedido/aprovar"
 
 End WsRestful
 

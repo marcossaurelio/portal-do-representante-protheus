@@ -7,10 +7,10 @@ WsRestful precificacao Description "Precificacao"
     WsData pageSize AS Character
     WsData search   AS Character
 
-    WsMethod Post   PrPrd   Description "Consulta precificacao de produto"  Path "/produto"
-    WsMethod Get    TabPr   Description "Consulta tabelas de precificacao"  Path "/tabelas"
-    WsMethod Get    DlTab   Description "Download tabela de precificacao"   Path "/tabelas/download/{tabela}"
-    WsMethod Post   FxPrc   Description "Consulta faixas de preço"          Path "/faixas"
+    WsMethod Post   PrPrd   Description "Consulta precificacao de produto"  Path "/portal-do-representante/precificacao/produto"
+    WsMethod Get    TabPr   Description "Consulta tabelas de precificacao"  Path "/portal-do-representante/precificacao/tabelas"
+    WsMethod Get    DlTab   Description "Download tabela de precificacao"   Path "/portal-do-representante/precificacao/tabelas/download/{tabela}"
+    WsMethod Post   FxPrc   Description "Consulta faixas de preço"          Path "/portal-do-representante/precificacao/faixas"
 
 End WsRestful
 

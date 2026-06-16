@@ -7,8 +7,8 @@ WsRestful vendedores Description "Vendedores"
     WsData pageSize AS Character
     WsData filter   AS Character
 
-    WsMethod Get Vends   Description "Retorna a lista de vendedores" Path "/"
-    WsMethod Get Vend    Description "Retorna um vendedor específico" Path "/{codigo}"
+    WsMethod Get Vends   Description "Retorna a lista de vendedores"    Path "/portal-do-representante/vendedores/"
+    WsMethod Get Vend    Description "Retorna um vendedor específico"   Path "/portal-do-representante/vendedores/{codigo}"
 
 End WsRestful
 

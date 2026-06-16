@@ -3,8 +3,8 @@
 
 WsRestful frete Description "Frete"
 
-    WsMethod Post   FrRod   Description "Consulta valor de frete rodoviário"    Path "/valor/rodoviario"
-    WsMethod Post   FrMar   Description "Consulta valor de frete marítimo"      Path "/valor/maritimo"
+    WsMethod Post   FrRod   Description "Consulta valor de frete rodoviário"   Path "/portal-do-representante/frete/valor/rodoviario"
+    WsMethod Post   FrMar   Description "Consulta valor de frete marítimo"     Path "/portal-do-representante/frete/valor/maritimo"
 
 End WsRestful
 

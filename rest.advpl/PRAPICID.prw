@@ -8,8 +8,8 @@ WsRestful cidades Description "Cidades"
     WsData filter       AS Character
     WsData state        AS Character
 
-    WsMethod Get Cids   Description "Retorna as cidades do estado"          Path "/"
-    WsMethod Get Cid    Description "Retorna uma cidade específica"         Path "/{codigo}"
+    WsMethod Get Cids   Description "Retorna as cidades do estado"          Path "/portal-do-representante/cidades/"
+    WsMethod Get Cid    Description "Retorna uma cidade específica"         Path "/portal-do-representante/cidades/{codigo}"
 
 End WsRestful
 

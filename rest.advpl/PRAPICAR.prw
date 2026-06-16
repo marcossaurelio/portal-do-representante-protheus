@@ -3,7 +3,7 @@
 
 WsRestful contasareceber Description "Contas a Receber"
 
-    WsMethod Post TitRe     Description "Retorna os títulos a receber"  Path "/"
+    WsMethod Post TitRe     Description "Retorna os títulos a receber"  Path "/portal-do-representante/contasareceber/"
 
 End WsRestful
 
