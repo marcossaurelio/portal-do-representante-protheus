@@ -118,7 +118,7 @@ WsMethod Get Clnt WsService clientes
 
     if SA1->(dbSeek(xFilial("SA1")+padR(cCodigoCliente, nTamCampo, " "))) .And. (AllTrim(SA1->A1_COD + SA1->A1_LOJA) == cCodigoCliente .Or. AllTrim(SA1->A1_CGC) == cCodigoCliente)
 
-        if validaCliente(SA1->A1_COD,SA1->A1_LOJA,cCodVendedor) .or. SA1->A1_VEND == cCodVendedor
+        if validaCliente(SA1->A1_COD,SA1->A1_LOJA,cCodVendedor)
 
             jResponse['success']        := .T.
             jResponse['codigo']         := SA1->A1_COD
@@ -326,15 +326,32 @@ static function getQueryClientes(cFiltro,cPagina,cTamPagina,cCodVendedor)
 
     cQuery += " SELECT DISTINCT A1_COD, A1_LOJA, A1_CGC, A1_NOME, A1_NREDUZ, A1_EST, A1_INSCR, A1_YCATEGO, A1_PESSOA
     cQuery += " FROM " + retSQLName("SA1") + " SA1
-
-    if Posicione("SA3",1,xFilial("SA3")+cCodVendedor,"A3_TIPO") != 'I'
-        cQuery += " INNER JOIN " + retSQLName("SCJ") + " SCJ ON CJ_CLIENTE = A1_COD AND CJ_LOJA = A1_LOJA AND SCJ.D_E_L_E_T_ = ' '
-    endif
-
     cQuery += " WHERE SA1.D_E_L_E_T_ = ' ' AND A1_MSBLQL != '1'
 
     if Posicione("SA3",1,xFilial("SA3")+cCodVendedor,"A3_TIPO") != 'I'
-        cQuery += " AND CJ_EMISSAO >= '" + dToS(Date()-90) + "' AND CJ_YVEND = '" + cCodVendedor + "'
+
+        cQuery += " AND (EXISTS (
+        cQuery += "     SELECT 1
+        cQuery += "     FROM " + retSQLName("SCJ") + " SCJ
+        cQuery += "     WHERE SCJ.D_E_L_E_T_ = ' '
+        cQuery += "       AND SCJ.CJ_CLIENTE = SA1.A1_COD
+        cQuery += "       AND SCJ.CJ_LOJA = SA1.A1_LOJA
+        cQuery += "       AND SCJ.CJ_EMISSAO >= '" + dToS(Date()-90) + "'
+        cQuery += "       AND SCJ.CJ_YVEND = '" + cCodVendedor + "'
+        cQuery += " )"
+
+        cQuery += " OR EXISTS (
+        cQuery += "     SELECT 1
+        cQuery += "     FROM " + retSQLName("SC5") + " SC5
+        cQuery += "     WHERE SC5.D_E_L_E_T_ = ' '
+        cQuery += "       AND SC5.C5_CLIENTE = SA1.A1_COD
+        cQuery += "       AND SC5.C5_LOJACLI = SA1.A1_LOJA
+        cQuery += "       AND SC5.C5_EMISSAO >= '" + dToS(Date()-90) + "'
+        cQuery += "       AND SC5.C5_VEND1 = '" + cCodVendedor + "'
+        cQuery += " )"
+
+        cQuery += " OR SA1.A1_VEND = '" + cCodVendedor + "')"
+
     endif
 
     if !empty(cFiltro)
@@ -355,11 +372,14 @@ return cQuery
 static function validaCliente(cCodCliente,cLojaCliente,cCodVendedor)
 
     local aArea             := getArea()
+    local aAreaSCJ          := SCJ->(GetArea())
+    local aAreaSC5          := SC5->(GetArea())
     local lRetorno          := .T.
     local cFiltroSCJ        := "SCJ->CJ_CLIENTE == '" + cCodCliente + "' .and. SCJ->CJ_LOJA == '" + cLojaCliente + "' .and. dToS(SCJ->CJ_EMISSAO) >= '" + dToS(Date()-90) + "'
+    local cFiltroSC5        := "SC5->C5_CLIENTE == '" + cCodCliente + "' .and. SC5->C5_LOJACLI == '" + cLojaCliente + "' .and. dToS(SC5->C5_EMISSAO) >= '" + dToS(Date()-90) + "'
     local cVendedorAtual    := ""
 
-    if Posicione("SA3",1,xFilial("SA3")+cCodVendedor,"A3_TIPO") == 'I' // Se o vendedor for interno, libera o cliente
+    if Posicione("SA3",1,xFilial("SA3")+cCodVendedor,"A3_TIPO") == 'I' .Or. Posicione("SA1",1,xFilial("SA1")+cCodCliente+cLojaCliente,"A1_VEND") == cCodVendedor
         lRetorno := .T.
         return lRetorno
     endif
@@ -391,7 +411,38 @@ static function validaCliente(cCodCliente,cLojaCliente,cCodVendedor)
 
     enddo
 
+    dbSelectArea("SC5")
+    SC5->(dbSetOrder(11))
+    SC5->(DbSetFilter({|| &(cFiltroSC5)}, cFiltroSC5))
+    SC5->(dbGoTop())
+
+    while !SC5->(eof())
+
+        if SC5->C5_VEND1 == cCodVendedor
+
+            lRetorno := .T.
+            Exit
+
+        else
+
+            if SC5->C5_VEND1 != cCodVendedor .and. !empty(SC5->C5_VEND1) .and. !empty(posicione("SA3",1,xFilial("SA3")+SC5->C5_VEND1,"A3_COD"))
+
+                cVendedorAtual := SA3->A3_NOME
+                lRetorno := .F.
+
+            endif
+
+        endif
+
+        SC5->(dbSkip())
+    
+    enddo
+
     SCJ->(dbClearFilter())
+    SC5->(dbClearFilter())
+
+    restArea(aAreaSCJ)
+    restArea(aAreaSC5)
     restArea(aArea)
 
 return lRetorno
