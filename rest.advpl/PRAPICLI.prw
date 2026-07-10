@@ -281,6 +281,7 @@ WsMethod Post CrCli WsService clientes
     aAdd(aDadosSA1, { "A1_EMAIL",   formataCampo(jBody:getJsonObject('email'),              "A1_EMAIL"),    nil })
     aAdd(aDadosSA1, { "A1_YMAILXM", formataCampo(jBody:getJsonObject('email'),              "A1_YMAILXM"),  nil })
     aAdd(aDadosSA1, { "A1_YVENINC", jBody:getJsonObject('vendedor'),                                        nil })
+    aAdd(aDadosSA1, { "A1_VEND",    jBody:getJsonObject('vendedor'),                                        nil })
     aAdd(aDadosSA1, { "A1_YPENREV", "S",                                                                    nil })
     aAdd(aDadosSA1, { "A1_YOBS",    formataCampo(jBody:getJsonObject('observacao'),         "A1_YOBS"),     nil })
     aAdd(aDadosSA1, { "A1_ENDCOB",  formataCampo(jBody:getJsonObject('endereco'),           "A1_ENDCOB"),   nil })
