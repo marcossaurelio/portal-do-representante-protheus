@@ -318,11 +318,16 @@ static function getPrecoCorrigido( jDadosProduto as json )
     local nPesoUnitProduto      := posicione("SB1", 1, xFilial("SB1") + cProduto, "B1_PESO")
     local nFreteTotal           := nVlrFrete + nVlrDescarga
     local nPrecoPaletePbr       := U_DefPort("PRCOPLTPBR",23.5)
-    local nPrecoPaleteDescart   := U_DefPort("PRCOPLTPBR",14.5)
+    local nPrecoPaleteDescart   := U_DefPort("PRCOPLTDES",14.5)
     local nPrecoStretch         := U_DefPort("PRCSTRETCH",10.5)
     local nPrecoForro           := U_DefPort("PRECOFORRO",0.0)
     local nTxJurosBase          := U_DefPort("TXJUROSBAS",3)/100
     local nTxLucroSobFreteBase  := U_DefPort("TXLUCSOBFR",2.5)/100
+
+    local nPrecoPalletComDev    := if(!lFilialCotacao .and. cTipoCarga != 'BT' .and. lDevolucaoPalete, U_DefPort("PRCPALCDEV",0), 0)
+    local nPrecoPalletSemDev    := if(!lFilialCotacao .and. cTipoCarga != 'BT' .and. !lDevolucaoPalete, U_DefPort("PRCPALSDEV",0), 0)
+
+    local nFatorInscrEstadual   := if(!lFilialCotacao .and. !lInscEstadual, U_DefPort("FATORINSCE",0)/100, 0)
 
     local nAliqImpostosFederais := U_DefPort("ALIQIMPFED",0.035)
     local nAliqICMSFrete        := iif( lFilialCotacao, iif( lInscEstadual, iif( cEstado=='RN', 0, U_DefPort("ALIQUOICMS",6)/100 ) , getAliqICMS(cEstado)/100 ), 0 )
@@ -332,20 +337,20 @@ static function getPrecoCorrigido( jDadosProduto as json )
     local nTxJurosSobFrete      := iif( cTipoFrete == "F", nTxJurosSobProdutos, nTxJurosBase / 30 * nPrazoPgtoFrete)
     local nTxLucroSobFreteReal  := iif( cTipoFrete == "F", nTxJurosSobProdutos, nTxLucroSobFreteBase / 30 * nPrazoPgtoFrete )
 
-    local nPrecoPbrTon10x1      := iif( !lDevolucaoPalete .and. left(cTipoCarga,1) == 'P', nQtdPaletes10x1 * nPrecoPaletePbr / (nPesoProdutos10x1/1000), 0 )
-    local nPrecoPbrTon30x1      := iif( !lDevolucaoPalete .and. left(cTipoCarga,1) == 'P', nQtdPaletes30x1 * nPrecoPaletePbr / (nPesoProdutos30x1/1000), 0 )
-    local nPrecoPbrTon25kg      := iif( !lDevolucaoPalete .and. left(cTipoCarga,1) == 'P', nQtdPaletes25kg * nPrecoPaletePbr / (nPesoProdutos25kg/1000), 0 )
-    local nPrecoPbrTonFormato   := iif( !lDevolucaoPalete .and. left(cTipoCarga,1) == 'P', nQtdPaletesFormato * nPrecoPaletePbr / (nPesoProdutosFormato/1000), 0 )
+    local nPrecoPbrTon10x1      := iif( !lDevolucaoPalete .and. left(cTipoCarga,1) == 'P' .And. lFilialCotacao, nQtdPaletes10x1 * nPrecoPaletePbr / (nPesoProdutos10x1/1000), 0 )
+    local nPrecoPbrTon30x1      := iif( !lDevolucaoPalete .and. left(cTipoCarga,1) == 'P' .And. lFilialCotacao, nQtdPaletes30x1 * nPrecoPaletePbr / (nPesoProdutos30x1/1000), 0 )
+    local nPrecoPbrTon25kg      := iif( !lDevolucaoPalete .and. left(cTipoCarga,1) == 'P' .And. lFilialCotacao, nQtdPaletes25kg * nPrecoPaletePbr / (nPesoProdutos25kg/1000), 0 )
+    local nPrecoPbrTonFormato   := iif( !lDevolucaoPalete .and. left(cTipoCarga,1) == 'P' .And. lFilialCotacao, nQtdPaletesFormato * nPrecoPaletePbr / (nPesoProdutosFormato/1000), 0 )
 
-    local nPrecoDescartTon10x1  := iif( !lDevolucaoPalete .and. left(cTipoCarga,1) == 'D', nQtdPaletes10x1 * nPrecoPaleteDescart / (nPesoProdutos10x1/1000), 0 )
-    local nPrecoDescartTon30x1  := iif( !lDevolucaoPalete .and. left(cTipoCarga,1) == 'D', nQtdPaletes30x1 * nPrecoPaleteDescart / (nPesoProdutos30x1/1000), 0 )
-    local nPrecoDescartTon25kg  := iif( !lDevolucaoPalete .and. left(cTipoCarga,1) == 'D', nQtdPaletes25kg * nPrecoPaleteDescart / (nPesoProdutos25kg/1000), 0 )
-    local nPrecoDescartTonForma := iif( !lDevolucaoPalete .and. left(cTipoCarga,1) == 'D', nQtdPaletesFormato * nPrecoPaleteDescart / (nPesoProdutosFormato/1000), 0 )
+    local nPrecoDescartTon10x1  := iif( !lDevolucaoPalete .and. left(cTipoCarga,1) == 'D' .And. lFilialCotacao, nQtdPaletes10x1 * nPrecoPaleteDescart / (nPesoProdutos10x1/1000), 0 )
+    local nPrecoDescartTon30x1  := iif( !lDevolucaoPalete .and. left(cTipoCarga,1) == 'D' .And. lFilialCotacao, nQtdPaletes30x1 * nPrecoPaleteDescart / (nPesoProdutos30x1/1000), 0 )
+    local nPrecoDescartTon25kg  := iif( !lDevolucaoPalete .and. left(cTipoCarga,1) == 'D' .And. lFilialCotacao, nQtdPaletes25kg * nPrecoPaleteDescart / (nPesoProdutos25kg/1000), 0 )
+    local nPrecoDescartTonForma := iif( !lDevolucaoPalete .and. left(cTipoCarga,1) == 'D' .And. lFilialCotacao, nQtdPaletesFormato * nPrecoPaleteDescart / (nPesoProdutosFormato/1000), 0 )
 
-    local nPrecoStretchTon10x1  := iif( cTipoCarga != 'BT', nQtdPaletes10x1 * nPrecoStretch / (nPesoProdutos10x1/1000), 0 )
-    local nPrecoStretchTon30x1  := iif( cTipoCarga != 'BT', nQtdPaletes30x1 * nPrecoStretch / (nPesoProdutos30x1/1000), 0 )
-    local nPrecoStretchTon25kg  := iif( cTipoCarga != 'BT', nQtdPaletes25kg * nPrecoStretch / (nPesoProdutos25kg/1000), 0 )
-    local nPrecoStretchTonForma := iif( cTipoCarga != 'BT', nQtdPaletesFormato * nPrecoStretch / (nPesoProdutosFormato/1000), 0 )
+    local nPrecoStretchTon10x1  := iif( cTipoCarga != 'BT' .And. lFilialCotacao, nQtdPaletes10x1 * nPrecoStretch / (nPesoProdutos10x1/1000), 0 )
+    local nPrecoStretchTon30x1  := iif( cTipoCarga != 'BT' .And. lFilialCotacao, nQtdPaletes30x1 * nPrecoStretch / (nPesoProdutos30x1/1000), 0 )
+    local nPrecoStretchTon25kg  := iif( cTipoCarga != 'BT' .And. lFilialCotacao, nQtdPaletes25kg * nPrecoStretch / (nPesoProdutos25kg/1000), 0 )
+    local nPrecoStretchTonForma := iif( cTipoCarga != 'BT' .And. lFilialCotacao, nQtdPaletesFormato * nPrecoStretch / (nPesoProdutosFormato/1000), 0 )
     
     local nPrecoForroTon10x1    := iif( lForro, nQtdPaletes10x1 * nPrecoForro / (nPesoProdutos10x1/1000), 0 )
     local nPrecoForroTon30x1    := iif( lForro, nQtdPaletes30x1 * nPrecoForro / (nPesoProdutos30x1/1000), 0 )
@@ -360,13 +365,17 @@ static function getPrecoCorrigido( jDadosProduto as json )
     local nFatorCorrecaoFrete   := 1 - (nTxJurosSobFrete + nTxLucroSobFreteReal + nAliqImpostosFederais + nAliqICMSFrete + nDescontoFinanceiro )
     local nFatorCorrecaoProd    := nTxJurosSobProdutos + nDescontoFinanceiro + nAliqICMSProdutos
 
-    local nFreteEfetivo         := (nFreteTotal + nPrecoPbrTon + nPrecoDescartTon + nPrecoStretchTon + nPrecoForroTon) / nFatorCorrecaoFrete
+    local nFreteEfetivo         := if(lFilialCotacao, (nFreteTotal + nPrecoPbrTon + nPrecoDescartTon + nPrecoStretchTon + nPrecoForroTon) / nFatorCorrecaoFrete, 0)
 
-    local nPrecoCorrigido       := nCustoProduto / (nCustoProduto / nPrecoTabela - nFatorCorrecaoProd) + (nFreteEfetivo * nPesoUnitProduto / 1000)
+    local nPrecoCorrigido       := (nCustoProduto / (nCustoProduto / nPrecoTabela - nFatorCorrecaoProd)) + (nFreteEfetivo * nPesoUnitProduto / 1000) + (nPrecoPalletComDev + nPrecoPalletSemDev + (nPrecoTabela * nFatorInscrEstadual))
 
     aAdd( aDadosPreco, nCustoProduto )
     aAdd( aDadosPreco, nPrecoTabela )
     aAdd( aDadosPreco, nFreteTotal )
+    aAdd( aDadosPreco, nTxLucroSobFreteBase )
+    aAdd( aDadosPreco, nTxLucroSobFreteReal )
+    aAdd( aDadosPreco, nAliqICMSFrete )
+    aAdd( aDadosPreco, nAliqICMSProdutos )
     aAdd( aDadosPreco, nPrecoPbrTon )
     aAdd( aDadosPreco, nPrecoDescartTon )
     aAdd( aDadosPreco, nPrecoStretchTon )
