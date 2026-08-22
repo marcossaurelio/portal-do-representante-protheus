@@ -170,19 +170,21 @@ WsMethod Get OrcDt WsService orcamentos
 
         jItem := JsonObject():New()
 
-        jItem['item']               := (cAliasItens)->CK_ITEM
-        jItem['produto']            := (cAliasItens)->CK_PRODUTO
-        jItem['descProduto']        := posicione("SB1",1,xFilial("SB1") + (cAliasItens)->CK_PRODUTO,"B1_DESC")
-        jItem['quantidade']         := (cAliasItens)->CK_QTDVEN
-        jItem['embalagem']          := (cAliasItens)->CK_UM
-        jItem['precoFOB']           := (cAliasItens)->CK_YBASFOB
-        jItem['valorUnitario']      := (cAliasItens)->CK_PRCVEN
-        jItem['valorTotal']         := (cAliasItens)->CK_VALOR
-        jItem['comissao']           := (cAliasItens)->CK_COMIS1
-        jItem['tes']                := (cAliasItens)->CK_TES
-        jItem['pesoNeto']           := posicione("SB1",1,xFilial("SB1")+(cAliasItens)->CK_PRODUTO,"B1_PESO")
-        jItem['pesoBruto']          := posicione("SB1",1,xFilial("SB1")+(cAliasItens)->CK_PRODUTO,"B1_PESBRU")
-        jItem['formatoEmbalagem']   := posicione("SB1",1,xFilial("SB1")+(cAliasItens)->CK_PRODUTO,"B1_YFORMAT")
+        jItem['item']                   := (cAliasItens)->CK_ITEM
+        jItem['produto']                := (cAliasItens)->CK_PRODUTO
+        jItem['descProduto']            := posicione("SB1",1,xFilial("SB1") + (cAliasItens)->CK_PRODUTO,"B1_DESC")
+        jItem['quantidade']             := (cAliasItens)->CK_QTDVEN
+        jItem['embalagem']              := (cAliasItens)->CK_UM
+        jItem['precoFOB']               := (cAliasItens)->CK_YBASFOB
+        jItem['valorUnitario']          := (cAliasItens)->CK_PRCVEN
+        jItem['valorTotal']             := (cAliasItens)->CK_VALOR
+        jItem['comissao']               := (cAliasItens)->CK_COMIS1
+        jItem['tes']                    := (cAliasItens)->CK_TES
+        jItem['pesoNeto']               := posicione("SB1",1,xFilial("SB1")+(cAliasItens)->CK_PRODUTO,"B1_PESO")
+        jItem['pesoBruto']              := posicione("SB1",1,xFilial("SB1")+(cAliasItens)->CK_PRODUTO,"B1_PESBRU")
+        jItem['formatoEmbalagem']       := posicione("SB1",1,xFilial("SB1")+(cAliasItens)->CK_PRODUTO,"B1_YFORMAT")
+        jItem['comissaoFixa']           := (cAliasItens)->CK_YCOMFIX == "S"
+        jItem['percentualComissaoFixa'] := (cAliasItens)->CK_YPCOMFI
 
         aAdd(jResponse['itens'],jItem)
         
@@ -678,11 +680,11 @@ return aCabecalho
 
 static function arrayItens(jBody as json) as array
 
-    local aItens        := {}                  as array
-    local jItem         := JsonObject():new()  as json
-    local aLinha        := {}                  as array
-    local nPos          := 0                   as numeric
-    local aItensJson    := {}              as array
+    local aItens        := {}                   as array
+    local jItem         := JsonObject():new()   as json
+    local aLinha        := {}                   as array
+    local nPos          := 0                    as numeric
+    local aItensJson    := {}                   as array
 
     iif( !empty(jBody:getJsonObject('itens')), aItensJson := jBody:getJsonObject('itens'), nil)
 
@@ -692,16 +694,18 @@ static function arrayItens(jBody as json) as array
 
         aLinha := {}
 
-        iif( !empty(jBody:getJsonObject('filial')),         aAdd( aLinha, { "CK_FILIAL",    jBody:getJsonObject('filial'),          nil } ) , nil )
-        iif( !empty(jItem:getJsonObject('item')),           aAdd( aLinha, { "CK_ITEM",      jItem:getJsonObject('item'),            nil } ) , nil )
-        iif( !empty(jItem:getJsonObject('produto')),        aAdd( aLinha, { "CK_PRODUTO",   jItem:getJsonObject('produto'),         nil } ) , nil )
-        iif( !empty(jItem:getJsonObject('quantidade')),     aAdd( aLinha, { "CK_QTDVEN",    jItem:getJsonObject('quantidade'),      nil } ) , nil )
-        iif( !empty(jItem:getJsonObject('precoFOB')),       aAdd( aLinha, { "CK_YBASFOB",   jItem:getJsonObject('precoFOB'),        nil } ) , nil )
-        iif( !empty(jItem:getJsonObject('precoUnitario')),  aAdd( aLinha, { "CK_PRCVEN",    jItem:getJsonObject('precoUnitario'),   nil } ) , nil )
-        iif( !empty(jItem:getJsonObject('comissao')),       aAdd( aLinha, { "CK_COMIS1",    jItem:getJsonObject('comissao'),        nil } ) , nil )
-        iif( !empty(jItem:getJsonObject('tes')),            aAdd( aLinha, { "CK_TES",       jItem:getJsonObject('tes'),             nil } ) , aAdd( aLinha, { "CK_TES",       AllTrim(GetMV("MS_PRTESPD")),             nil } ) )
-        iif( !empty(jBody:getJsonObject('cliente')),        aAdd( aLinha, { "CK_CLIENTE",   jBody:getJsonObject('cliente'),         nil } ) , nil )
-        iif( !empty(jBody:getJsonObject('loja')),           aAdd( aLinha, { "CK_LOJA",      jBody:getJsonObject('loja'),            nil } ) , nil )
+        iif( !empty(jBody:getJsonObject('filial')),                 aAdd( aLinha, { "CK_FILIAL",    jBody:getJsonObject('filial'),                      nil } ) , nil )
+        iif( !empty(jItem:getJsonObject('item')),                   aAdd( aLinha, { "CK_ITEM",      jItem:getJsonObject('item'),                        nil } ) , nil )
+        iif( !empty(jItem:getJsonObject('produto')),                aAdd( aLinha, { "CK_PRODUTO",   jItem:getJsonObject('produto'),                     nil } ) , nil )
+        iif( !empty(jItem:getJsonObject('quantidade')),             aAdd( aLinha, { "CK_QTDVEN",    jItem:getJsonObject('quantidade'),                  nil } ) , nil )
+        iif( !empty(jItem:getJsonObject('precoFOB')),               aAdd( aLinha, { "CK_YBASFOB",   jItem:getJsonObject('precoFOB'),                    nil } ) , nil )
+        iif( !empty(jItem:getJsonObject('precoUnitario')),          aAdd( aLinha, { "CK_PRCVEN",    jItem:getJsonObject('precoUnitario'),               nil } ) , nil )
+        iif( !empty(jItem:getJsonObject('comissao')),               aAdd( aLinha, { "CK_COMIS1",    jItem:getJsonObject('comissao'),                    nil } ) , nil )
+        iif( !empty(jItem:getJsonObject('tes')),                    aAdd( aLinha, { "CK_TES",       jItem:getJsonObject('tes'),                         nil } ) , aAdd( aLinha, { "CK_TES",       AllTrim(GetMV("MS_PRTESPD")),             nil } ) )
+        iif( !empty(jBody:getJsonObject('cliente')),                aAdd( aLinha, { "CK_CLIENTE",   jBody:getJsonObject('cliente'),                     nil } ) , nil )
+        iif( !empty(jBody:getJsonObject('loja')),                   aAdd( aLinha, { "CK_LOJA",      jBody:getJsonObject('loja'),                        nil } ) , nil )
+        iif( !empty(jItem:getJsonObject('comissaoFixa')),           aAdd( aLinha, { "CK_YCOMFIX",   jItem:getJsonObject('comissaoFixa'),                nil } ) , nil )
+        iif( !empty(jItem:getJsonObject('percentualComissaoFixa')), aAdd( aLinha, { "CK_YPCOMFI",   jItem:getJsonObject('percentualComissaoFixa'),      nil } ) , nil )
 
         aAdd(aItens,aLinha)
 
