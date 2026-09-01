@@ -10,14 +10,14 @@ WsRestful orcamentos Description "Orcamentos"
     WsData branchId         AS Character
     WsData budget           AS Character
 
-    WsMethod Post   Orcs    Description "Retorna os orcamentos de um vendedor"      Path "/portal-do-representante/orcamentos/"
-    WsMethod Get    OrcDt   Description "Retorna os dados de um orcamento"          Path "/portal-do-representante/orcamentos/dados"
-    WsMethod Post   OrcIn   Description "Inclui um orcamento"                       Path "/portal-do-representante/orcamentos/incluir"
-    WsMethod Put    OrcUp   Description "Altera um orcamento"                       Path "/portal-do-representante/orcamentos/alterar"
-    WsMethod Post   Indic   Description "Retorna os indicadores de orcamentos"      Path "/portal-do-representante/orcamentos/indicadores"
-    WsMethod Put    ApCot   Description "Aprova uma cotação"                        Path "/portal-do-representante/orcamentos/cotacao/aprovar"
-    WsMethod Put    RjCot   Description "Rejeita uma cotação"                       Path "/portal-do-representante/orcamentos/cotacao/rejeitar"
-    WsMethod Put    ApPPd   Description "Envia Pré Pedido para aprovação"           Path "/portal-do-representante/orcamentos/pre-pedido/aprovar"
+    WsMethod Post   Orcs    Description "Retorna os orcamentos de um vendedor"          Path "/portal-do-representante/orcamentos/"
+    WsMethod Get    OrcDt   Description "Retorna os dados de um orcamento"              Path "/portal-do-representante/orcamentos/dados"
+    WsMethod Post   OrcIn   Description "Inclui um orcamento"                           Path "/portal-do-representante/orcamentos/incluir"
+    WsMethod Put    OrcUp   Description "Altera um orcamento"                           Path "/portal-do-representante/orcamentos/alterar"
+    WsMethod Post   Indic   Description "Retorna os indicadores de orcamentos"          Path "/portal-do-representante/orcamentos/indicadores"
+    WsMethod Put    ApOrc   Description "Aprova um orçamento"                           Path "/portal-do-representante/orcamentos/aprovar"
+    WsMethod Put    RjOrc   Description "Rejeita um orçamento"                          Path "/portal-do-representante/orcamentos/rejeitar"
+    WsMethod Get    MotRj   Description "Retorna os motivos de rejeição disponíveis"    Path "/portal-do-representante/orcamentos/motivos-rejeicao"
 
 End WsRestful
 
@@ -77,6 +77,8 @@ WsMethod Post Orcs WsService orcamentos
         jRegistro['situacaoPedido']         := iif( !empty((cAlias)->C5_NUM), iif( !empty((cAlias)->C5_NOTA) .And. !("X" $ (cAlias)->C5_NOTA), "F", "C" ), nil)
         jRegistro['dataVencimento']         := (cAlias)->CJ_VALIDA
         jRegistro['dataAlteracao']          := (cAlias)->CJ_YDTALTE
+        jRegistro['motivoRejeicao']         := (cAlias)->CJ_YMOTREJ
+        jRegistro['descricaoRejeicao']      := (cAlias)->CJ_YDESCMR
 
         aAdd(jResponse['objects'],jRegistro)
 
@@ -391,7 +393,7 @@ WsMethod Post Indic WsService orcamentos
 return lRet
 
 
-WsMethod Put ApCot WsService orcamentos
+WsMethod Put ApOrc WsService orcamentos
 
     local jResponse         := JsonObject():new()       as json
     local jBody             := JsonObject():new()       as json
@@ -413,7 +415,7 @@ WsMethod Put ApCot WsService orcamentos
     SCJ->(dbSetOrder(1))
     SCJ->(dbGoTop())
 
-    If SCJ->(dbSeek(cFilialOrc+PadR(cOrcamento,cTamCampoOrc," "))) .And. SCJ->CJ_YPRSITU == "CP"
+    If SCJ->(dbSeek(cFilialOrc+PadR(cOrcamento,cTamCampoOrc," "))) .And. SCJ->CJ_YPRSITU $ "CP|PP"
 
         If recLock("SCJ",.F.)
 
@@ -422,15 +424,15 @@ WsMethod Put ApCot WsService orcamentos
             SCJ->(msUnlock())
 
             jResponse["success"]    := .T.
-            jResponse["message"]    := "Cotação " + cOrcamento + " aprovada com sucesso."
+            jResponse["message"]    := "Orçamento " + cOrcamento + " aprovada com sucesso."
 
         Else
 
             lRet := .F.
 
             jResponse["success"]    := .F.
-            jResponse["message"]    := "Erro ao aprovar a cotação."
-            jResponse["fix"]        := "Não foi possível aprovar a cotação, tente novamente mais tarde."
+            jResponse["message"]    := "Erro ao aprovar o orçamento."
+            jResponse["fix"]        := "Não foi possível aprovar o orçamento, tente novamente mais tarde."
 
         EndIf
 
@@ -439,7 +441,7 @@ WsMethod Put ApCot WsService orcamentos
         lRet := .F.
 
         jResponse["success"]    := .F.
-        jResponse["message"]    := "Cotação não encontrada."
+        jResponse["message"]    := "Orçamento não encontrado."
         jResponse["fix"]        := "Verifique os dados informados."
 
     endif
@@ -451,13 +453,15 @@ WsMethod Put ApCot WsService orcamentos
 return lRet
 
 
-WsMethod Put RjCot WsService orcamentos
+WsMethod Put RjOrc WsService orcamentos
 
     local jResponse         := JsonObject():new()       as json
     local jBody             := JsonObject():new()       as json
     local cBody             := self:getContent()        as character
     local cFilialOrc        := ""                       as character
     local cOrcamento        := ""                       as character
+    Local cMotivoRej        := ""                       as character
+    Local cDescRej          := ""                       as character
     local cTamCampoOrc      := 6                        as numeric
     local aArea             := GetArea()                as array
     local lRet              := .T.
@@ -466,6 +470,9 @@ WsMethod Put RjCot WsService orcamentos
 
     cFilialOrc := jBody:getJsonObject('filial')
     cOrcamento := jBody:getJsonObject('orcamento')
+    cMotivoRej := jBody:getJsonObject('motivo')
+    cDescRej   := jBody:getJsonObject('descricao')
+    
 
     cTamCampoOrc := tamSX3("CJ_NUM")[1]
 
@@ -473,24 +480,26 @@ WsMethod Put RjCot WsService orcamentos
     SCJ->(dbSetOrder(1))
     SCJ->(dbGoTop())
 
-    If SCJ->(dbSeek(cFilialOrc+PadR(cOrcamento,cTamCampoOrc," "))) .And. SCJ->CJ_YPRSITU == "CP"
+    If SCJ->(dbSeek(cFilialOrc+PadR(cOrcamento,cTamCampoOrc," "))) .And. SCJ->CJ_YPRSITU $ "CP|PP"
 
         If recLock("SCJ",.F.)
 
-            SCJ->CJ_YPRSITU := "CR"
+            SCJ->CJ_YMOTREJ := cMotivoRej
+            SCJ->CJ_YDESCMR := cDescRej
+            SCJ->CJ_YPRSITU := if(SCJ->CJ_YPRSITU == "CP","CR","PR")
             SCJ->CJ_YDTALTE := date()
             SCJ->(msUnlock())
 
             jResponse["success"]    := .T.
-            jResponse["message"]    := "Cotação " + cOrcamento + " rejeitada com sucesso."
+            jResponse["message"]    := "Orçamento " + cOrcamento + " rejeitada com sucesso."
 
         Else
 
             lRet := .F.
 
             jResponse["success"]    := .F.
-            jResponse["message"]    := "Erro ao rejeitar a cotação."
-            jResponse["fix"]        := "Não foi possível rejeitar a cotação, tente novamente mais tarde."
+            jResponse["message"]    := "Erro ao rejeitar o orçamento."
+            jResponse["fix"]        := "Não foi possível rejeitar o orçamento, tente novamente mais tarde."
 
         EndIf
 
@@ -499,7 +508,7 @@ WsMethod Put RjCot WsService orcamentos
         lRet := .F.
 
         jResponse["success"]    := .F.
-        jResponse["message"]    := "Cotação não encontrada."
+        jResponse["message"]    := "Orçamento não encontrado."
         jResponse["fix"]        := "Verifique os dados informados."
 
     endif
@@ -511,62 +520,34 @@ WsMethod Put RjCot WsService orcamentos
 return lRet
 
 
-WsMethod Put ApPPd WsService orcamentos
+WsMethod Get MotRj WsService orcamentos
 
     local jResponse         := JsonObject():new()       as json
-    local jBody             := JsonObject():new()       as json
-    local cBody             := self:getContent()        as character
-    local cFilialOrc        := ""                       as character
-    local cOrcamento        := ""                       as character
-    local cTamCampoOrc      := 6                        as numeric
-    local aArea             := GetArea()                as array
+    local jItem             := JsonObject():new()       as json
+    local aMotivos          := {}                       as array
+    Local aMotivo           := {}                       as array
+    local nPos              := 0                        as numeric
     local lRet              := .T.
 
-    jBody:fromJson(cBody)
+    aMotivos := TkSX3Box("CJ_YMOTREJ")
 
-    cFilialOrc := jBody:getJsonObject('filial')
-    cOrcamento := jBody:getJsonObject('orcamento')
+    jResponse['motivos'] := {}
+    jResponse['success'] := .T.
 
-    cTamCampoOrc := tamSX3("CJ_NUM")[1]
+    for nPos := 1 to Len(aMotivos)
 
-    dbSelectArea("SCJ")
-    SCJ->(dbSetOrder(1))
-    SCJ->(dbGoTop())
+        aMotivo := StrTokArr2(aMotivos[nPos],"=")
 
-    If SCJ->(dbSeek(cFilialOrc+PadR(cOrcamento,cTamCampoOrc," "))) .And. SCJ->CJ_YPRSITU == "PP"
+        jItem := JsonObject():new()
 
-        If recLock("SCJ",.F.)
+        jItem['codigo']     := aMotivo[1]
+        jItem['descricao']  := aMotivo[2]
 
-            SCJ->CJ_YPRSITU := "AP"
-            SCJ->CJ_YDTALTE := date()
-            SCJ->(msUnlock())
+        aAdd(jResponse['motivos'],jItem)
 
-            jResponse["success"]    := .T.
-            jResponse["message"]    := "Pré Pedido " + cOrcamento + " enviado para aprovação com sucesso."
+    next
 
-        Else
-
-            lRet = .F.
-
-            jResponse["success"]    := .F.
-            jResponse["message"]    := "Erro ao enviar o Pré Pedido para aprovação."
-            jResponse["fix"]        := "Não foi possível enviar o Pré Pedido, tente novamente mais tarde."
-
-        EndIf
-
-    else
-
-        lRet = .F.
-
-        jResponse["success"]    := .F.
-        jResponse["message"]    := "Pré Pedido não encontrado."
-        jResponse["fix"]        := "Verifique os dados informados."
-
-    endif
-    
     self:setResponse(jResponse:toJson())
-
-    RestArea(aArea)
 
 return lRet
 

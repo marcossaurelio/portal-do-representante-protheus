@@ -31,20 +31,20 @@ WsMethod Post FatAc WsService dashboard
     
     jBody:fromJson(cBody)
 
-    cQuery := QryFatAcum(jBody)
+    aAnos := { GetMax(jBody:GetJsonObject("anos")), AllTrim(cValToChar(Val(GetMax(jBody:GetJsonObject("anos")))-1)) }
+
+    cQuery := QryFatAcum(jBody, aAnos)
 
     MPSysOpenQuery(cQuery,cAlias)
 
     (cAlias)->(DbGoTop())
 
-    While !(cAlias)->(Eof())
+    If !(cAlias)->(Eof())
     
-        AAdd(aAnos,     AllTrim((cAlias)->ANO))
-        AAdd(aValores,  Round((cAlias)->VALOR,2))
+        AAdd(aValores,  Round((cAlias)->ANOATU,2))
+        AAdd(aValores,  Round((cAlias)->ANOANT,2))
 
-        (cAlias)->(DbSkip())
-
-    EndDo
+    EndIf
 
     jResponse["anos"]       := aAnos
     jResponse["valores"]    := aValores
@@ -460,30 +460,54 @@ WsMethod Get Anos WsService dashboard
 Return lRet
 
 
-Static Function QryFatAcum(jBody)
+Static Function QryFatAcum(jBody, aAnos)
 
     Local cQuery        := ""
     Local jBodyInfo     := FormatBody(jBody)
-    Local aAnos         := { GetMax(jBody:GetJsonObject("anos")), AllTrim(cValToChar(Val(GetMax(jBody:GetJsonObject("anos")))-1)) }
     Local cMeses        := jBodyInfo:GetJsonObject("meses")
     Local cFiliais      := jBodyInfo:GetJsonObject("filiais")
     Local cVendedores   := jBodyInfo:GetJsonObject("vendedores")
     Local cProdutos     := jBodyInfo:GetJsonObject("produtos")
 
-    cQuery += " SELECT ANO, SUM(VALOR) AS VALOR
-    cQuery += " FROM (
+    cQuery += " WITH FATURAMENTO AS (
+    cQuery += " 	SELECT
+    cQuery += " 		SD2.D2_CLIENTE,
+    cQuery += " 		SA1.A1_NOME,
+    cQuery += " 		SUM(
+    cQuery += " 			CASE
+    cQuery += " 				WHEN LEFT(SD2.D2_EMISSAO, 4) = '" + aAnos[1] + "' THEN SD2.D2_TOTAL - SD2.D2_VALDEV
+    cQuery += " 				ELSE 0
+    cQuery += " 			END
+    cQuery += " 		) AS ANOATU,
+    cQuery += " 		SUM(
+    cQuery += " 			CASE
+    cQuery += " 				WHEN LEFT(SD2.D2_EMISSAO, 4) = '" + aAnos[2] + "' THEN SD2.D2_TOTAL - SD2.D2_VALDEV
+    cQuery += " 				ELSE 0
+    cQuery += " 			END
+    cQuery += " 		) AS ANOANT
+    cQuery += " 	FROM
+    cQuery += " 		SD2100 SD2
+    cQuery += " 		INNER JOIN SA1100 SA1 ON SD2.D2_CLIENTE = SA1.A1_COD
+    cQuery += " 		AND SD2.D2_LOJA = SA1.A1_LOJA
+    cQuery += " 		AND SD2.D_E_L_E_T_ = ' '
+    cQuery += " 		AND SA1.D_E_L_E_T_ = ' '
+    cQuery += " 		INNER JOIN SF2100 SF2 ON SF2.F2_FILIAL = SD2.D2_FILIAL
+    cQuery += " 		AND SF2.F2_DOC = SD2.D2_DOC
+    cQuery += " 		AND SF2.F2_SERIE = SD2.D2_SERIE
+    cQuery += " 		AND SF2.F2_CLIENTE = SD2.D2_CLIENTE
+    cQuery += " 		AND SF2.F2_LOJA = SD2.D2_LOJA
+    cQuery += " 		AND SF2.D_E_L_E_T_ = ' '
+    cQuery += " 	WHERE
+    cQuery += " 		SD2.D_E_L_E_T_ = ' '
+    cQuery += " 		AND LEFT(SD2.D2_EMISSAO, 4) IN " + FormatIn(ArrTokStr(aAnos,","),",")
+    cQuery += " 		AND SUBSTRING(SD2.D2_EMISSAO, 5, 2) IN " + cMeses
+    cQuery += " 		AND SD2.D2_FILIAL IN " + cFiliais
 
-    cQuery += " SELECT TOP 2 LEFT(D2_EMISSAO,4) AS ANO, SUM(D2_TOTAL-D2_VALDEV) AS VALOR
-    cQuery += " FROM " + RetSQLName("SD2") + " SD2
-    cQuery += " INNER JOIN " + RetSQLName("SC5") + " SC5 ON C5_FILIAL = D2_FILIAL AND C5_NUM = D2_PEDIDO AND SC5.D_E_L_E_T_ = ' '
-    cQuery += " WHERE SD2.D_E_L_E_T_ = ' ' AND LEFT(D2_EMISSAO,4) IN " + FormatIn(ArrTokStr(aAnos,","),",") + " AND SUBSTRING(D2_EMISSAO,5,2) IN " + cMeses
-    cQuery += " AND D2_FILIAL IN " + cFiliais
+    if !Empty(cVendedores)
 
-    If !Empty(cVendedores)
-
-        cQuery += " AND C5_VEND1 IN " + cVendedores
+        cQuery += " AND F2_VEND1 IN " + cVendedores
     
-    EndIf
+    endif
 
     If !Empty(cProdutos)
 
@@ -491,19 +515,32 @@ Static Function QryFatAcum(jBody)
 
     EndIf
 
-    cQuery += " GROUP BY LEFT(D2_EMISSAO,4)
-
-    cQuery += " UNION ALL
-
-    cQuery += " SELECT '" + aAnos[1] + "' AS ANO, 0 AS VALOR
-	cQuery += " UNION ALL
-	cQuery += " SELECT '" + aAnos[2] + "', 0
-
-    cQuery += " ) AS DADOS"
-
-    cQuery += " GROUP BY ANO
-    cQuery += " ORDER BY ANO DESC
-
+    cQuery += " 	GROUP BY
+    cQuery += " 		SD2.D2_CLIENTE,
+    cQuery += " 		SA1.A1_NOME
+    cQuery += " ),
+    cQuery += " FATURAMENTO_CLASSIFICADO AS (
+    cQuery += " 	SELECT
+    cQuery += " 		*,
+    cQuery += " 		CASE
+    cQuery += " 			WHEN ANOATU = ANOANT THEN 'MANTEVE'
+    cQuery += " 			WHEN ANOATU = 0
+    cQuery += " 			AND ANOANT > 0 THEN 'SEM COMPRAS'
+    cQuery += " 			WHEN ANOATU > 0
+    cQuery += " 			AND ANOANT = 0 THEN 'CLIENTE NOVO'
+    cQuery += " 			WHEN ANOATU > ANOANT THEN 'AUMENTOU'
+    cQuery += " 			WHEN ANOATU < ANOANT THEN 'REDUZIU'
+    cQuery += " 		END AS STATUS
+    cQuery += " 	FROM
+    cQuery += " 		FATURAMENTO
+    cQuery += " )
+    
+    cQuery += " SELECT
+    cQuery += " 	SUM(ANOATU) AS ANOATU,
+    cQuery += " 	SUM(ANOANT) AS ANOANT,
+    cQuery += " FROM
+    cQuery += " 	FATURAMENTO_CLASSIFICADO
+    
 Return cQuery
 
 
