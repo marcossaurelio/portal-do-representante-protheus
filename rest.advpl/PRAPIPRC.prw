@@ -195,6 +195,7 @@ WsMethod Get DlTab WsService precificacao
         cArqDownl := oArquivo:FullRead()
 
         Self:SetHeader("Content-Disposition", "attachment; filename=" + ExtractFile(cArquivo))
+        Self:SetHeader("Access-Control-Expose-Headers", "Content-Disposition")
 
         Self:SetResponse(cArqDownl)
 
