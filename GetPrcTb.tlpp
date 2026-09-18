@@ -3,41 +3,48 @@
 
 user function getPrcTb( jDadosProduto )
 
-    local cFilialOrc        := jDadosProduto:getJsonObject('filial')
-    local cUnidadeCarreg    := jDadosProduto:getJsonObject('unidadeCarregamento')
-    local cProduto          := jDadosProduto:getJsonObject('produto')
-    local cTipoFrete        := jDadosProduto:getJsonObject('tipoFrete')
-    local nPrecoFOB         := jDadosProduto:getJsonObject('precoFOB')
-    local cCategCliente     := jDadosProduto:getJsonObject('categoriaCliente')
-    local nDiasPagto        := jDadosProduto:getJsonObject('prazoPagtoProduto')
-    local nVolume           := jDadosProduto:getJsonObject('volumeTotal')
-    local nVlrFaturamento   := jDadosProduto:getJsonObject('totalFaturamento')
+    local cFilialOrc            := jDadosProduto:getJsonObject('filial')
+    local cUnidadeCarreg        := jDadosProduto:getJsonObject('unidadeCarregamento')
+    local cProduto              := jDadosProduto:getJsonObject('produto')
+    local cTipoFrete            := jDadosProduto:getJsonObject('tipoFrete')
+    local nPrecoFOB             := jDadosProduto:getJsonObject('precoFOB')
+    local cCategCliente         := jDadosProduto:getJsonObject('categoriaCliente')
+    local nDiasPagto            := jDadosProduto:getJsonObject('prazoPagtoProduto')
+    local nVolume               := jDadosProduto:getJsonObject('pesoTotalProdutos')
+    local nVlrFaturamento       := jDadosProduto:getJsonObject('totalFaturamento')
+    local cCliente              := jDadosProduto:getJsonObject('cliente')
+    local cLojaCliente          := jDadosProduto:getJsonObject('lojaCliente')
 
-    local cQuery            := ""
-    local cAlias            := getNextAlias()
-    local cTipoPreco        := ""
-    local nFaixaMinima      := 0
-    local aFaixasReg        := {}
-    local aItensReg         := {}
-    local aTemp             := {}
-    local nVlrReferencia    := 0
-    local nPreco            := 0
-    local nComissao         := 0
-    local nVolumeMinimo     := 0
-    local nFatMinimo        := 0
-    local nMaxDiasPgto      := 0
-    local aCategorias       := {}
-    local cChave            := ""
-    local nPos              := 0
-    local oPrecoFinal       := nil
-    local aPrecos           := {}
-    local aDescartar        := {}
-    local lExistRegsTudoOk  := .T.
+    local cQuery                := ""
+    local cAlias                := getNextAlias()
+    local cTipoPreco            := ""
+    local nFaixaMinima          := 0
+    local aFaixasReg            := {}
+    local aItensReg             := {}
+    local aTemp                 := {}
+    local nVlrReferencia        := 0
+    local nPreco                := 0
+    local nComissao             := 0
+    local nVolumeMinimo         := 0
+    local nFatMinimo            := 0
+    local nMaxDiasPgto          := 0
+    local nVolumeFaturadoMes    := 0
+    local aCategorias           := {}
+    local cChave                := ""
+    local nPos                  := 0
+    local oPrecoFinal           := nil
+    local aPrecos               := {}
+    local aDescartar            := {}
+    local lExistRegsTudoOk      := .T.
 
-    private oPreco          := nil
-    private lFilialCotacao  := left(cFilialOrc,4) == "0101"
+    private oPreco              := nil
+    private lFilialCotacao      := left(cFilialOrc,4) == "0101"
 
-    public aDadosPreco      := {}
+    public aDadosPreco          := {}
+
+    nVolumeFaturadoMes := getVolumeFaturadoMes(cCliente, cLojaCliente, dDataBase)
+
+    nVolume += nVolumeFaturadoMes
 
     cQuery += " SELECT *
     cQuery += " FROM
@@ -70,7 +77,7 @@ user function getPrcTb( jDadosProduto )
         nVolumeMinimo   := (cAlias)->DA0_YVLMIN
         nFatMinimo      := (cAlias)->DA0_YFATMI
         nMaxDiasPgto    := (cAlias)->DA0_YMAXDP
-        aCategorias     := iif( empty((cAlias)->DA0_YCATEG), {}, strTokArr2(allTrim((cAlias)->DA0_YCATEG)," ") )
+        aCategorias     := iif( empty((cAlias)->DA0_YCATEG), {}, strTokArr2(allTrim((cAlias)->DA0_YCATEG),";") )
         nComissao       := (cAlias)->DA0_YCOMIS
         cChave          := ""
 
@@ -427,3 +434,44 @@ static function getAliqICMS(cEstadoDestino)
     nAliquotaTotal  := nAliquotaICMS //+ nAliquotaFECP
 
 return nAliquotaTotal
+
+
+static function getVolumeFaturadoMes(cCliente, cLoja, dData)
+
+    local nVolumeFaturadoMes    := 0
+    local cQuery                := ""
+    local cAlias                := getNextAlias()
+    local aArea                 := getArea()
+
+    cQuery += " SELECT
+    cQuery += "     SUM(SB1.B1_PESO * SD2.D2_QUANT) AS VOLUME_FATURADO_MES
+    cQuery += " FROM
+    cQuery += "     SD2100 SD2
+    cQuery += " INNER JOIN
+    cQuery += "     SF2100 SF2 ON SF2.F2_FILIAL = SD2.D2_FILIAL
+    cQuery += "     AND SF2.F2_DOC = SD2.D2_DOC AND SF2.F2_SERIE = SD2.D2_SERIE
+    cQuery += "     AND SF2.F2_CLIENTE = SD2.D2_CLIENTE AND SF2.F2_LOJA = SD2.D2_LOJA
+    cQuery += "     AND SF2.D_E_L_E_T_ = ' '
+    cQuery += " INNER JOIN
+    cQuery += "     SB1100 SB1 ON SB1.B1_COD = SD2.D2_COD
+    cQuery += "     AND SB1.D_E_L_E_T_ = ' '
+    cQuery += " WHERE
+    cQuery += "     SD2.D_E_L_E_T_ = ' ' AND SD2.D2_TIPO NOT IN ('D') AND SF2.F2_DUPL != ''
+    cQuery += "     AND LEFT(SD2.D2_EMISSAO, 6) = '" + left(cValToChar(dData),6) + "'"
+    cQuery += "     AND SD2.D2_CLIENTE = '" + cCliente + "' AND SD2.D2_LOJA = '" + cLoja + "'"
+
+    mpSysOpenQuery( cQuery, cAlias )
+
+    (cAlias)->(dbGoTop())
+
+    if !(cAlias)->(eof())
+
+        nVolumeFaturadoMes := (cAlias)->VOLUME_FATURADO_MES
+    
+    endif
+
+    (cAlias)->(dbCloseArea())
+
+    restArea(aArea)
+    
+return nVolumeFaturadoMes
