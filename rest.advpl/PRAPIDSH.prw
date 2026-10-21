@@ -10,6 +10,7 @@ WsRestful dashboard Description "Dashboard"
     WsMethod Post   FaPer   Description "Retorna o faturamento por período"     Path "/portal-do-representante/dashboard/faturamento-x-periodo"
     WsMethod Post   HisFa   Description "Retorna o histórico de faturamento"    Path "/portal-do-representante/dashboard/historico-faturamento"
     WsMethod Post   CatCl   Description "Categorias de Clientes"                Path "/portal-do-representante/dashboard/categorias-clientes"
+    WsMethod Post   VlPer   Description "Retorna o volume por período"          Path "/portal-do-representante/dashboard/volume-x-periodo"
     WsMethod Post   CatPr   Description "Categorias de Produtos"                Path "/portal-do-representante/dashboard/categorias-produtos"
     WsMethod Get    Anos    Description "Anos para filtro"                      Path "/portal-do-representante/dashboard/filtros/anos"
 
@@ -275,6 +276,68 @@ WsMethod Post CatCl WsService dashboard
     EndDo
 
     jResponse["categorias"] := aPercentuais
+
+    Self:SetResponse(jResponse:toJson())
+
+    (cAlias)->(DbCloseArea())
+
+Return lRet
+
+
+WsMethod Post VlPer WsService dashboard
+
+    Local jResponse         := JsonObject():New()
+    Local jAno              := JsonObject():New()
+    Local jBody             := JsonObject():New()
+    Local cBody             := Self:GetContent()
+    Local cQuery            := ""
+    Local cAlias            := GetNextAlias()
+    Local aAno              := {}
+    Local cAno              := ""
+    Local aAnos             := {}
+    Local nPos              := 0
+    Local lRet              := .T.
+    
+    jBody:fromJson(cBody)
+
+    cQuery := QryVolXPer(jBody)
+
+    MPSysOpenQuery(cQuery,cAlias)
+
+    (cAlias)->(DbGoTop())
+
+    While !(cAlias)->(Eof())
+    
+        cAno := AllTrim((cAlias)->ANO)
+        aAno := Array(12)
+    
+        While !(cAlias)->(Eof()) .And. AllTrim((cAlias)->ANO) == cAno
+           
+            aAno[val((cAlias)->MES)] := Round((cAlias)->VOLUME,0)
+            (cAlias)->(DbSkip())
+
+        EndDo
+
+        For nPos := 1 To Len(aAno)
+
+            If Empty(aAno[nPos])
+
+                aAno[nPos] := 0
+
+            EndIf
+        
+        Next
+
+        jAno := JsonObject():New()
+
+        jAno["ano"]     := cAno
+        jAno["meses"]   := aAno
+
+        AAdd(aAnos, jAno)
+
+    EndDo
+
+    jResponse["anos"] := aAnos
 
     Self:SetResponse(jResponse:toJson())
 
@@ -612,6 +675,48 @@ Static Function getCategorias()
     Next
 
 Return aCategorias
+
+
+Static Function QryVolXPer(jBody)
+
+    Local cQuery        := ""
+    Local jBodyInfo     := FormatBody(jBody)
+    Local cAnos         := jBodyInfo:GetJsonObject("anos")
+    Local cMeses        := jBodyInfo:GetJsonObject("meses")
+    Local cFiliais      := jBodyInfo:GetJsonObject("filiais")
+    Local cVendedores   := jBodyInfo:GetJsonObject("vendedores")
+    Local cProdutos     := jBodyInfo:GetJsonObject("produtos")
+
+    cQuery += " SELECT LEFT(D2_EMISSAO,4) AS ANO, SUBSTRING(D2_EMISSAO,5,2) AS MES, SUM(B1_PESO*D2_QUANT)/1000 AS VOLUME
+    cQuery += " FROM " + RetSQLName("SD2") + " SD2
+    cQuery += " INNER JOIN " + RetSQLName("SF2") + " SF2 ON SF2.F2_FILIAL = SD2.D2_FILIAL
+    cQuery += " 		AND SF2.F2_DOC = SD2.D2_DOC
+    cQuery += " 		AND SF2.F2_SERIE = SD2.D2_SERIE
+    cQuery += " 		AND SF2.F2_CLIENTE = SD2.D2_CLIENTE
+    cQuery += " 		AND SF2.F2_LOJA = SD2.D2_LOJA
+    cQuery += " 		AND SF2.D_E_L_E_T_ = ' '
+    cQuery += " INNER JOIN " + RetSQLName("SB1") + " SB1 ON B1_COD = D2_COD AND SB1.D_E_L_E_T_ = ' '
+    cQuery += " WHERE SD2.D_E_L_E_T_ = ' ' AND SF2.F2_DUPL != '' AND SD2.D2_TIPO NOT IN ('D')
+    cQuery += "     AND LEFT(D2_EMISSAO,4) IN " + cAnos + " AND SUBSTRING(D2_EMISSAO,5,2) IN " + cMeses
+    cQuery += "     AND D2_FILIAL IN " + cFiliais
+
+    If !Empty(cVendedores)
+
+        cQuery += " AND F2_VEND1 IN " + cVendedores
+    
+    EndIf
+
+    If !Empty(cProdutos)
+
+        cQuery += " AND D2_COD IN " + cProdutos
+
+    EndIf
+
+    cQuery += " GROUP BY LEFT(D2_EMISSAO,4), SUBSTRING(D2_EMISSAO,5,2)
+    cQuery += " ORDER BY ANO,MES
+
+Return cQuery
+
 
 Static Function QryCatProd(jBody)
 
