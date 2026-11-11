@@ -14,6 +14,7 @@ user function getPrcTb( jDadosProduto )
     local nVlrFaturamento       := jDadosProduto:getJsonObject('totalFaturamento')
     local cCliente              := jDadosProduto:getJsonObject('cliente')
     local cLojaCliente          := jDadosProduto:getJsonObject('lojaCliente')
+    local cTipoVendedor         := jDadosProduto:getJsonObject('tipoVendedor')
 
     local cQuery                := ""
     local cAlias                := getNextAlias()
@@ -36,6 +37,7 @@ user function getPrcTb( jDadosProduto )
     local aPrecos               := {}
     local aDescartar            := {}
     local lExistRegsTudoOk      := .T.
+    local lVendedorInterno      := cTipoVendedor == "I"
 
     private oPreco              := nil
     private lFilialCotacao      := left(cFilialOrc,4) == "0101"
@@ -142,8 +144,20 @@ user function getPrcTb( jDadosProduto )
         next
 
         if empty(cChave)
-            (cAlias)->(dbSkip())
-            loop
+
+            if lVendedorInterno .and. cTipoPreco == "C"
+
+                cChave      := (cAlias)->DA1_FILIAL + "|" + (cAlias)->DA1_CODTAB + "|" + (cAlias)->DA1_ITEM + "|" + (cAlias)->DA1_CODPRO + "|1"
+                nPreco      := nPrecoFOB
+                nComissao   := aItensReg[1]
+
+            else
+
+                (cAlias)->(dbSkip())
+                loop
+
+            endif
+
         endif
 
         oPreco := zPrcTab():New( cFilialOrc, cProduto, nPreco, nPreco, nComissao, nMaxDiasPgto, nVolumeMinimo, nFatMinimo, aCategorias, cTipoPreco, cChave )
